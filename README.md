@@ -7,7 +7,7 @@ A visual programming language.
  │                     ┌─/*...*/───────────────────────┐         │
  │                     │ Returns true if input is even │         │
  │ ┌─Inputs──┐         └───────────────────────────────┘         │
- │ │ number ○┼─┐                                                 │ 
+ │ │ number ○┼─┐                                                 │
  │ └─────────┘ │                                                 │
  │             │  ┌─ƒ(Modulo)──┐   ┌─ƒ(Equality)──┐ ┌─Outputs──┐ │
  │             └──┼○          ○┼───┼○            ○┼─┼○         │ │
