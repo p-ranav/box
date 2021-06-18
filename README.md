@@ -1,6 +1,6 @@
 # box
 
-A visual programming language.
+A text-based visual programming language.
 
 ```
  ┌─ƒ(Is Even)────────────────────────────────────────────────────┐
