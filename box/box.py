@@ -48,14 +48,11 @@ def read_file(filename):
         # Find all lines where a box starts
         lines_with_box_starts = []
         box_top_left_start = (BOX_TOKEN_TOP_LEFT + BOX_TOKEN_HORIZONTAL)
-        print("Searching for", box_top_left_start)
         for i, line in enumerate(lines):
             row = i                
             if box_top_left_start in line:
                 cols = [n for n in range(len(line)) if line.find(box_top_left_start, n) == n]
-                print(row, cols)
                 for col in cols:
-                    print("Found", (row, col), lines[row][col] + lines[row][col + 1] + lines[row][col + 2])
                     lines_with_box_starts.append([row, col])
 
         class BoxIterator:
@@ -88,7 +85,6 @@ def read_file(filename):
         boxes = []
         # follow each line and find box dimensions
         for start in lines_with_box_starts:
-            print("Checking with start", start)
             box_name = ""
             top_left = (0, 0)
             top_right = (0, 0)
