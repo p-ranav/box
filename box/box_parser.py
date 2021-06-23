@@ -16,6 +16,10 @@ BOX_TOKEN_INPUT_PORT    = '┼'
 BOX_TOKEN_OUTPUT_PORT   = '┼'
 BOX_TOKEN_FUNCTION      = 'ƒ'
 BOX_TOKEN_COMMENT       = '/*...*/'
+BOX_TOKEN_SINGLE_QUOTE  = '\''
+BOX_TOKEN_DOUBLE_QUOTE  = '"'
+BOX_TOKEN_OPEN_PAREN    = '('
+BOX_TOKEN_CLOSE_PAREN   = ')'
 
 def detect_boxes(filename):
     boxes = []
@@ -156,11 +160,19 @@ def new_box(lines, parent, children):
     if len(name):
         if name[0] == BOX_TOKEN_FUNCTION:
             parent_box.node_type = box_type.BOX_TYPE_FUNCTION
-            assert name[1] == '('
-            assert name[len(name) - 1] == ')'
+            assert name[1] == BOX_TOKEN_OPEN_PAREN
+            assert name[len(name) - 1] == BOX_TOKEN_CLOSE_PAREN
             parent_box.box_info.name = name[2:len(name) - 1]
         elif name == BOX_TOKEN_COMMENT:
             parent_box.node_type = box_type.BOX_TYPE_COMMENT
+        elif name.isnumeric():
+            parent_box.node_type = box_type.BOX_TYPE_NUMERIC
+        elif name[0] == BOX_TOKEN_SINGLE_QUOTE:
+            parent_box.node_type = box_type.BOX_TYPE_STRING_LITERAL
+            assert name[len(name) - 1] == BOX_TOKEN_SINGLE_QUOTE
+        elif name[0] == BOX_TOKEN_DOUBLE_QUOTE:
+            parent_box.node_type = box_type.BOX_TYPE_STRING_LITERAL
+            assert name[len(name) - 1] == BOX_TOKEN_DOUBLE_QUOTE            
 
     # Save input ports
     for p in parent.input_ports:
