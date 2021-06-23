@@ -48,9 +48,15 @@ def read_file(filename):
         # Find all lines where a box starts
         lines_with_box_starts = []
         box_top_left_start = (BOX_TOKEN_TOP_LEFT + BOX_TOKEN_HORIZONTAL)
+        print("Searching for", box_top_left_start)
         for i, line in enumerate(lines):
+            row = i                
             if box_top_left_start in line:
-                lines_with_box_starts.append([i, line.index(box_top_left_start)])
+                cols = [n for n in range(len(line)) if line.find(box_top_left_start, n) == n]
+                print(row, cols)
+                for col in cols:
+                    print("Found", (row, col), lines[row][col] + lines[row][col + 1] + lines[row][col + 2])
+                    lines_with_box_starts.append([row, col])
 
         class BoxIterator:
             def __init__(self, lines, current_x, current_y):
@@ -59,7 +65,10 @@ def read_file(filename):
                 self.current_y = current_y
 
             def current(self):
-                return lines[self.current_x][self.current_y]
+                if self.current_x < len(lines):
+                    if self.current_y < len(lines[self.current_x]):
+                        return lines[self.current_x][self.current_y]
+                return None
 
             def right(self):
                 self.current_y += 1
@@ -79,6 +88,7 @@ def read_file(filename):
         boxes = []
         # follow each line and find box dimensions
         for start in lines_with_box_starts:
+            print("Checking with start", start)
             box_name = ""
             top_left = (0, 0)
             top_right = (0, 0)
@@ -96,17 +106,17 @@ def read_file(filename):
                 it.right()
 
             # Read box name
-            while it.current() != BOX_TOKEN_HORIZONTAL:
+            while it.current() and it.current() != BOX_TOKEN_HORIZONTAL:
                 box_name += it.current()
-                it.right()                
+                it.right()
 
             while it.current() == BOX_TOKEN_HORIZONTAL:
                 it.right()                
 
             if it.current() != BOX_TOKEN_TOP_RIGHT:
                 # This is not a valid box
-                print("Not top right", it.current())
-                pass
+                print("Not top right", it.current(), it.pos())
+                continue
             else:
                 # We've reached top_right
                 top_right = it.pos()
@@ -122,7 +132,7 @@ def read_file(filename):
 
                 if it.current() != BOX_TOKEN_BOTTOM_RIGHT:
                     # This is not a valid box
-                    print("Not bottom right", it.current())
+                    print("Not bottom right", it.current(), it.pos())
                     pass
                 else:
                     # We've reached bottom_right
@@ -134,7 +144,7 @@ def read_file(filename):
                     if it.current() != BOX_TOKEN_BOTTOM_LEFT:
                         # This is not a valid box
                         print("Not bottom left", it.current())
-                        pass
+                        continue
                     else:
                         # We've reached bottom_left
                         bottom_left = it.pos()
@@ -149,8 +159,8 @@ def read_file(filename):
 
                         if it.current() != BOX_TOKEN_TOP_LEFT:
                             # This is not a valid box
-                            print("Not top left", it.current())
-                            pass
+                            print("Not top left", it.current(), it.pos())
+                            continue
                         else:
                             # This is a valid box
                             boxes.append(BoxInfo(box_name, top_left, top_right, bottom_right, bottom_left, input_ports, output_ports))
