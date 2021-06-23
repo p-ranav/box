@@ -1,5 +1,9 @@
+from box import Box
 from box_iterator import BoxIterator
 from box_info import BoxInfo
+from operator import attrgetter
+from port import Port
+import uuid
 
 BOX_TOKEN_TOP_LEFT     = '┌'
 BOX_TOKEN_TOP_RIGHT    = '┐'
@@ -8,7 +12,7 @@ BOX_TOKEN_BOTTOM_RIGHT = '┘'
 BOX_TOKEN_HORIZONTAL   = '─'
 BOX_TOKEN_VERTICAL     = '│'
 BOX_TOKEN_INPUT_PORT   = '┼' 
-BOX_TOKEN_OUTPUT_PORT  = '┼' 
+BOX_TOKEN_OUTPUT_PORT  = '┼'
 
 def detect_boxes(filename):
     boxes = []
@@ -116,4 +120,131 @@ def detect_boxes(filename):
                                                  top_left, top_right, bottom_right, bottom_left,
                                                  input_ports, output_ports))
 
-    return boxes
+    return lines, boxes
+
+def generate_uuid():
+    return uuid.uuid4()
+
+def new_box(lines, parent, children):
+    parent_box = Box()
+    parent_box.box_info = parent
+    parent_box.uuid = generate_uuid()
+
+    # Save input ports
+    for p in parent.input_ports:
+        port = Port()
+        port.port_type = "input"
+        port.x = p[0]
+        port.y = p[1]
+        port.uuid = generate_uuid()
+        port.parent_uuid = parent_box.uuid
+        parent_box.input_ports.append(port)
+
+    # Save output ports
+    for p in parent.output_ports:
+        port = Port()
+        port.port_type = "output"
+        port.x = p[0]
+        port.y = p[1]
+        port.uuid = generate_uuid()
+        port.parent_uuid = parent_box.uuid
+        parent_box.output_ports.append(port)
+
+    # Save children
+    for child in children:
+        child_box = new_box(lines, child, [])
+        child_box.parent_uuid = parent_box.uuid
+        parent_box.children.append(child_box)
+
+    # Keep a map of all ports
+    # {(x, y): box_guid, ...}
+    all_input_ports = {}
+    all_output_ports = {}
+    for child in parent_box.children:
+        if len(child.input_ports):
+            for port in child.input_ports:
+                all_input_ports[(port.x, port.y)] = (port.parent_uuid, port.uuid)
+        if len(child.output_ports):
+            for port in child.output_ports:
+                all_output_ports[(port.x, port.y)] = (port.parent_uuid, port.uuid)
+
+    # Save connections between children
+    for child in parent_box.children:
+        if len(child.output_ports):
+            # this child box has output ports
+            # follow any lines drawn from the output port
+            # see which other box it reaches
+            for port in child.output_ports:
+                src_uuid = port.uuid
+                src_parent_uuid = port.parent_uuid
+                x, y = port.x, port.y
+                it = BoxIterator(lines, x, y)
+
+                direction = "right"
+                it.right()
+
+                while True:
+                    if it.current() == BOX_TOKEN_HORIZONTAL:
+                        if direction == "right":
+                            # keep going right
+                            it.right()
+                        elif direction == "left":
+                            # keep going left
+                            it.left()
+                    elif it.current() == BOX_TOKEN_VERTICAL:
+                        if direction == "up":
+                            # keep going up
+                            it.top()
+                        elif direction == "down":
+                            # keep going down
+                            it.bottom()
+                    elif it.current() == BOX_TOKEN_TOP_LEFT:
+                        if direction == "up":
+                            it.right()
+                            direction = "right"
+                        elif direction == "left":
+                            it.bottom()
+                            direction = "down"                                                   
+                    elif it.current() == BOX_TOKEN_TOP_RIGHT:
+                        if direction == "right":
+                            it.bottom()
+                            direction = "down"
+                        elif direction == "up":
+                            it.left()
+                            direction = "left"
+                    elif it.current() == BOX_TOKEN_BOTTOM_RIGHT:
+                        if direction == "right":
+                            it.top()
+                            direction = "up"
+                        elif direction == "down":
+                            it.left()
+                            direction = "left"
+                    elif it.current() == BOX_TOKEN_BOTTOM_LEFT:
+                        if direction == "left":
+                            it.top()
+                            direction = "up"
+                        elif direction == "down":
+                            it.right()
+                            direction = "right"
+                    else:
+                        break
+                possibly_new_port = it.pos()
+                if possibly_new_port in all_input_ports:
+                    dst = all_input_ports[possibly_new_port]
+                    dst_parent_uuid = dst[0]                                        
+                    dst_uuid = dst[1]
+
+                    # Record the connection between src and destination
+                    parent_box.connections[(src_parent_uuid, src_uuid)] = (dst_parent_uuid, dst_uuid)
+
+                else:
+                    print("Invalid connection from (" + str(x) + ", " + str(y) + ")")
+
+    return parent_box
+
+        
+def build_parse_tree(lines, boxes):
+    parent = min(boxes, key=attrgetter('top_left'))
+    boxes.remove(parent)
+    children = boxes
+    return new_box(lines, parent, children)

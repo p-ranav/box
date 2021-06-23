@@ -1,5 +1,4 @@
-from box_parser import detect_boxes
-from box import build_parse_tree
+from box_parser import detect_boxes, build_parse_tree
 
 # find box that is left-most and top-most
 # this is the chosen parent
@@ -7,8 +6,8 @@ from box import build_parse_tree
 # 
 
 def main(filename = "test.box"):
-    boxes = detect_boxes(filename)
-    root = build_parse_tree(boxes)
+    lines, boxes = detect_boxes(filename)
+    root = build_parse_tree(lines, boxes)
     root.print()
         
 if __name__ == "__main__":
