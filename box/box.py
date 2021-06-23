@@ -1,171 +1,83 @@
-import os
-import sys
+from operator import attrgetter
+from box_info import BoxInfo
+import uuid
 
-BOX_TOKEN_TOP_LEFT     = '┌'
-BOX_TOKEN_TOP_RIGHT    = '┐'
-BOX_TOKEN_BOTTOM_LEFT  = '└'
-BOX_TOKEN_BOTTOM_RIGHT = '┘'
-BOX_TOKEN_HORIZONTAL   = '─'
-BOX_TOKEN_VERTICAL     = '│'
-BOX_TOKEN_INPUT_PORT   = '┼' 
-BOX_TOKEN_OUTPUT_PORT  = '┼' 
+def generate_uuid():
+    return uuid.uuid4()
 
-class BoxInfo:
-    def __init__(self, name, top_left, top_right, bottom_right, bottom_left, input_ports, output_ports):
-        self.name = name
-        # Box dimensions
-        self.top_left = top_left
-        self.top_right = top_right
-        self.bottom_left = bottom_left
-        self.bottom_right = bottom_right
-        # Box ports
-        self.input_ports = input_ports
-        self.output_ports = output_ports
+class Port:
+    def __init__(self):
+        self.port_type = ""
+        self.x = 0
+        self.y = 0
+        self.uuid = None
+        self.parent_uuid = None
 
     def print(self):
-        print("*", self.name)
-        print("  - Top left     ", self.top_left)
-        print("  - Top right    ", self.top_right)
-        print("  - Bottom right ", self.bottom_right)
-        print("  - Bottom left  ", self.bottom_left)
-        print("  - Input ports  ", self.input_ports)
-        print("  - Output ports ", self.output_ports)
+        print('  * Port:')
+        print('    - type:', self.port_type)
+        print('    - x:', self.x)
+        print('    - y:', self.y)
+        print('    - UUID:', self.uuid)
+        print('    - parent_uuid:', self.parent_uuid)
 
-def read_file(filename):
-    with open(filename) as file:
+class Box:
+    def __init__(self):
+        self.box_info = None
+        self.uuid = None
+        self.parent_uuid = None
+        self.node_type = ""     # function? constant?
+        self.input_ports = []   # list of Port
+        self.output_ports = []  # list of Port
+        self.children = []      # list of Box
+        self.connections = {}   # src -> dst Ports (guid) between boxes
 
-        # Build a list of lines
-        lines = [line for line in file]
+    def print(self):
+        self.box_info.print()
+        print('  - UUID', self.uuid)
+        print('  - Parent UUID', self.parent_uuid)        
+        print('  - Node Type', self.node_type)
+        for p in self.input_ports:
+            p.print()
+        for p in self.output_ports:
+            p.print()
+        for child in self.children:
+            child.print()
 
-        # Find if there needs to be any padding
-        # If so, pad some lines with empty spaces
-        max_width = max([len(line) for line in lines])
-        height = len(lines)
-        for line in lines:
-            if max_width > len(line):
-                line += " "*(max_width - len(line))
+def new_box(parent, children):
+    parent_box = Box()
+    parent_box.box_info = parent
+    parent_box.uuid = generate_uuid()
+    
+    for p in parent.input_ports:
+        port = Port()
+        port.port_type = "input"
+        port.x = p[0]
+        port.y = p[1]
+        port.uuid = generate_uuid()
+        port.parent_uuid = parent_box.uuid
+        parent_box.input_ports.append(port)
 
-        # Find all lines where a box starts
-        detected_boxes = []
-        box_top_left_start = (BOX_TOKEN_TOP_LEFT + BOX_TOKEN_HORIZONTAL)
-        for i, line in enumerate(lines):
-            row = i                
-            if box_top_left_start in line:
-                cols = [n for n in range(len(line)) if line.find(box_top_left_start, n) == n]
-                for col in cols:
-                    detected_boxes.append([row, col])
+    for p in parent.output_ports:
+        port = Port()
+        port.port_type = "output"
+        port.x = p[0]
+        port.y = p[1]
+        port.uuid = generate_uuid()
+        port.parent_uuid = parent_box.uuid
+        parent_box.output_ports.append(port)
 
-        class BoxIterator:
-            def __init__(self, lines, current_x, current_y):
-                self.lines = lines
-                self.current_x = current_x
-                self.current_y = current_y
+    for child in children:
+        child_box = new_box(child, [])
+        child_box.parent_uuid = parent_box.uuid
+        parent_box.children.append(child_box)
 
-            def current(self):
-                if self.current_x < len(lines):
-                    if self.current_y < len(lines[self.current_x]):
-                        return lines[self.current_x][self.current_y]
-                return None
+    return parent_box
 
-            def right(self):
-                self.current_y += 1
-
-            def left(self):
-                self.current_y -= 1
-
-            def top(self):
-                self.current_x -= 1
-
-            def bottom(self):
-                self.current_x += 1
-
-            def pos(self):
-                return (self.current_x, self.current_y)
-
-        boxes = []
-        # follow each line and find box dimensions
-        for start_of_new_box in detected_boxes:
-            box_name = ""
-            top_left = (0, 0)
-            top_right = (0, 0)
-            bottom_left = (0, 0)
-            bottom_right = (0, 0)
-            input_ports = []
-            output_ports = []
-
-            it = BoxIterator(lines, start_of_new_box[0], start_of_new_box[1])
-
-            top_left = it.pos()
-
-            it.right()
-            while it.current() == BOX_TOKEN_HORIZONTAL:
-                it.right()
-
-            # Read box name
-            while it.current() and it.current() != BOX_TOKEN_HORIZONTAL:
-                box_name += it.current()
-                it.right()
-
-            while it.current() == BOX_TOKEN_HORIZONTAL:
-                it.right()                
-
-            if it.current() != BOX_TOKEN_TOP_RIGHT:
-                # This is not a valid box
-                print("Not top right", it.current(), it.pos())
-                continue
-            else:
-                # We've reached top_right
-                top_right = it.pos()
-                
-                it.bottom()
-                while it.current() == BOX_TOKEN_VERTICAL or it.current() == BOX_TOKEN_OUTPUT_PORT:
-                    if it.current() == BOX_TOKEN_OUTPUT_PORT:
-                        while it.current() == BOX_TOKEN_OUTPUT_PORT:
-                            output_ports.append(it.pos())
-                            it.bottom()
-                    else:
-                        it.bottom()
-
-                if it.current() != BOX_TOKEN_BOTTOM_RIGHT:
-                    # This is not a valid box
-                    print("Not bottom right", it.current(), it.pos())
-                    pass
-                else:
-                    # We've reached bottom_right
-                    bottom_right = it.pos()
-                    it.left()
-                    while it.current() == BOX_TOKEN_HORIZONTAL:
-                        it.left()
-
-                    if it.current() != BOX_TOKEN_BOTTOM_LEFT:
-                        # This is not a valid box
-                        print("Not bottom left", it.current())
-                        continue
-                    else:
-                        # We've reached bottom_left
-                        bottom_left = it.pos()
-                        it.top()
-                        while it.current() == BOX_TOKEN_VERTICAL or it.current() == BOX_TOKEN_INPUT_PORT:
-                            if it.current() == BOX_TOKEN_INPUT_PORT:
-                                while it.current() == BOX_TOKEN_INPUT_PORT:
-                                    input_ports.append(it.pos())
-                                    it.top()
-                            else:
-                                it.top()                            
-
-                        if it.current() != BOX_TOKEN_TOP_LEFT:
-                            # This is not a valid box
-                            print("Not top left", it.current(), it.pos())
-                            continue
-                        else:
-                            # This is a valid box
-                            boxes.append(BoxInfo(box_name, top_left, top_right, bottom_right, bottom_left, input_ports, output_ports))
-
-        for box in boxes:
-            box.print()
-
-def main(filename = "test.box"):
-    read_file(filename)
         
-if __name__ == "__main__":
-    main()
+def build_parse_tree(box_infos):
+    parent = min(box_infos, key=attrgetter('top_left'))
+    box_infos.remove(parent)
+    children = box_infos
+
+    return new_box(parent, children)
