@@ -1,18 +1,21 @@
 from box import Box
 from box_iterator import BoxIterator
 from box_info import BoxInfo
+import box_type
 from operator import attrgetter
 from port import Port
 import uuid
 
-BOX_TOKEN_TOP_LEFT     = '┌'
-BOX_TOKEN_TOP_RIGHT    = '┐'
-BOX_TOKEN_BOTTOM_LEFT  = '└'
-BOX_TOKEN_BOTTOM_RIGHT = '┘'
-BOX_TOKEN_HORIZONTAL   = '─'
-BOX_TOKEN_VERTICAL     = '│'
-BOX_TOKEN_INPUT_PORT   = '┼' 
-BOX_TOKEN_OUTPUT_PORT  = '┼'
+BOX_TOKEN_TOP_LEFT      = '┌'
+BOX_TOKEN_TOP_RIGHT     = '┐'
+BOX_TOKEN_BOTTOM_LEFT   = '└'
+BOX_TOKEN_BOTTOM_RIGHT  = '┘'
+BOX_TOKEN_HORIZONTAL    = '─'
+BOX_TOKEN_VERTICAL      = '│'
+BOX_TOKEN_INPUT_PORT    = '┼' 
+BOX_TOKEN_OUTPUT_PORT   = '┼'
+BOX_TOKEN_FUNCTION      = 'ƒ'
+BOX_TOKEN_COMMENT       = '/*...*/'
 
 def detect_boxes(filename):
     boxes = []
@@ -116,7 +119,26 @@ def detect_boxes(filename):
                             continue
                         else:
                             # This is a valid box
-                            boxes.append(BoxInfo(box_name,
+
+                            # Parse box contents
+                            box_contents = ""
+                            i_start = top_left[0]
+                            i_end = bottom_right[0]
+                            j_start = top_left[1]
+                            j_end = top_right[1]
+                            i_start += 1
+                            j_start += 1
+
+                            while i_start < i_end:
+                                while j_start < j_end:
+                                    box_contents += lines[i_start][j_start]
+                                    j_start += 1
+                                box_contents += "\n"
+                                i_start += 1
+                                j_start = top_left[1] + 1
+
+                            # Create new BoxInfo object for this box
+                            boxes.append(BoxInfo(box_name, box_contents,
                                                  top_left, top_right, bottom_right, bottom_left,
                                                  input_ports, output_ports))
 
@@ -129,6 +151,16 @@ def new_box(lines, parent, children):
     parent_box = Box()
     parent_box.box_info = parent
     parent_box.uuid = generate_uuid()
+
+    name = parent_box.box_info.name
+    if len(name):
+        if name[0] == BOX_TOKEN_FUNCTION:
+            parent_box.node_type = box_type.BOX_TYPE_FUNCTION
+            assert name[1] == '('
+            assert name[len(name) - 1] == ')'
+            parent_box.box_info.name = name[2:len(name) - 1]
+        elif name == BOX_TOKEN_COMMENT:
+            parent_box.node_type = box_type.BOX_TYPE_COMMENT
 
     # Save input ports
     for p in parent.input_ports:

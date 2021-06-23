@@ -14,9 +14,9 @@ class Box:
 
     def print(self):
         self.box_info.print()
-        print('  - UUID', self.uuid)
-        print('  - Parent UUID', self.parent_uuid)        
-        print('  - Node Type', self.node_type)
+        print('  - UUID         ', self.uuid)
+        print('  - Parent UUID  ', self.parent_uuid)        
+        print('  - Node Type    ', self.node_type)
         for p in self.input_ports:
             p.print()
         for p in self.output_ports:

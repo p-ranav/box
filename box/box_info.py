@@ -1,6 +1,7 @@
 
 class BoxInfo:
     def __init__(self, name,
+                 contents,
                  top_left,
                  top_right,
                  bottom_right,
@@ -8,6 +9,7 @@ class BoxInfo:
                  input_ports,
                  output_ports):
         self.name = name
+        self.contents = contents
         # Box dimensions
         self.top_left = top_left
         self.top_right = top_right
