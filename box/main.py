@@ -24,7 +24,7 @@ def build_executable_function(root):
     def prev(boxes, root):
         result = []
         for box in boxes:
-            input_ports = reversed(box.input_ports)
+            input_ports = box.input_ports
             for port in input_ports:
                 prev_box_uuid, prev_port_uuid = root.dst2src_connections[(box.uuid, port.uuid)]
                 result.extend(filter(lambda x: x.uuid == prev_box_uuid, root.children))
@@ -73,7 +73,7 @@ def build_executable_function(root):
         elif o.node_type == box_type.BOX_TYPE_FUNCTION:
             possible_inputs_to_this_function = order_of_operations[:i]
             call_args = []
-            for p in reversed(o.input_ports):
+            for p in o.input_ports:
                 input_box_uuid, input_port_uuid = root.dst2src_connections[o.uuid, p.uuid]
                 call_args.append([find_box(root.children, input_box_uuid), input_port_uuid])
 
@@ -85,7 +85,7 @@ def build_executable_function(root):
                 if arg_box.box_info.name == "Inputs":
                     # input is connected to this call
                     # check which port is connected
-                    port_index = [port.uuid for port in reversed(arg_box.output_ports)].index(arg_port_uuid)
+                    port_index = [port.uuid for port in arg_box.output_ports].index(arg_port_uuid)
                     call_arg_strings.append("param_" + str(port_index))
                 elif arg_box.node_type in [box_type.BOX_TYPE_NUMERIC, box_type.BOX_TYPE_STRING_LITERAL]:
                     call_arg_strings.append(constant_names[arg_box])
@@ -97,7 +97,7 @@ def build_executable_function(root):
             nodes.append(FunctionCallNode(o, o.box_info.name, call_arg_strings, len(o.output_ports) > 0))
         elif o.box_info.name == "Outputs":
             output_args = []
-            for p in reversed(o.input_ports):
+            for p in o.input_ports:
                 input_box_uuid, input_port_uuid = root.dst2src_connections[o.uuid, p.uuid]
                 output_args.append([find_box(root.children, input_box_uuid), input_port_uuid])            
 
@@ -109,7 +109,7 @@ def build_executable_function(root):
                 if arg_box.box_info.name == "Inputs":
                     # input is connected to this call
                     # check which port is connected
-                    port_index = [port.uuid for port in reversed(arg_box.output_ports)].index(arg_port_uuid)
+                    port_index = [port.uuid for port in arg_box.output_ports].index(arg_port_uuid)
                     return_val_strings.append("param_" + str(port_index))            
                 elif arg_box.node_type in [box_type.BOX_TYPE_NUMERIC, box_type.BOX_TYPE_STRING_LITERAL]:
                     return_val_strings.append(constant_names[arg_box])

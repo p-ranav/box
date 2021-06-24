@@ -146,7 +146,7 @@ def detect_boxes(filename):
                             # Create new BoxInfo object for this box
                             boxes.append(BoxInfo(box_name, box_contents,
                                                  top_left, top_right, bottom_right, bottom_left,
-                                                 input_ports, output_ports))
+                                                 reversed(input_ports), output_ports))
 
     return lines, boxes
 
