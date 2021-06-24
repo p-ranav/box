@@ -1,85 +1,12 @@
 from box_parser import detect_boxes, build_parse_tree
+from nodes.string_literal_node import StringLiteralNode
+from nodes.inputs_node import InputsNode
+from nodes.outputs_node import OutputsNode
+from nodes.function_call_node import FunctionCallNode
+
 import box_type
 import re
 import sys
-
-class BoxFunctionInvocation:
-    def __init__(self, name, *args):
-        self.name = name
-        self.args = args
-
-    def to_python(self):
-        result = self.name + '('
-        for i, arg in enumerate(self.args):
-            result += arg
-            if i < len(self.args) - 1:
-                result += ', '
-        result += ')'
-        return result
-
-class InputsNode:
-    def __init__(self, node_ref):
-        self.node_ref = node_ref
-
-    def to_python(self):
-        index = 0
-        result = "("
-        for inp in self.node_ref.output_ports:
-            result += "param_" + str(index)
-            if index < len(self.node_ref.output_ports) - 1:
-                result += ", "
-            index += 1
-        result += ")"
-        return result
-
-class OutputsNode:
-    def __init__(self, node_ref, return_vars):
-        self.node_ref = node_ref
-        self.return_vars = return_vars
-
-    def to_python(self):
-        if len(self.return_vars) == 0:
-            return "return"
-        elif len(self.return_vars) == 1:
-            return "return " + str(self.return_vars[0])
-        elif len(self.return_vars) > 1:
-            result = "return ("
-            for i, output in enumerate(self.return_vars):
-                result += output
-                if i < len(self.return_vars) - 1:
-                    result += ", "
-                index += 1
-            result += ")"
-        else:
-            return "return"
-
-class StringNode:
-    def __init__(self, node_ref, name, value):
-        self.node_ref = node_ref
-        self.name = name
-        self.value = value
-
-    def to_python(self):
-        return self.name + ' = ' + str(self.value)
-
-class FunctionCallNode:
-    def __init__(self, node_ref, name, args, save_output = False):
-        self.node_ref = node_ref
-        self.name = name
-        self.args = args
-        self.save_output = save_output
-
-    def to_python(self):
-        result = ""
-        if self.save_output:
-            result += self.name + "_result = " 
-        result += self.name + "("
-        for i, arg in enumerate(self.args):
-            result += arg
-            if i < len(self.args) - 1:
-                result += ", "
-        result += ")"
-        return result
 
 def build_executable_function(root):
     excutable_boxes = []
@@ -140,7 +67,7 @@ def build_executable_function(root):
         if o.box_info.name == "Inputs":
             nodes.append(InputsNode(o))
         elif o.node_type in [box_type.BOX_TYPE_STRING_LITERAL, box_type.BOX_TYPE_NUMERIC]:
-            nodes.append(StringNode(o, "constant_" + str(constant_index), o.box_info.name))
+            nodes.append(StringLiteralNode(o, "constant_" + str(constant_index), o.box_info.name))
             constant_names[o] = "constant_" + str(constant_index)
             constant_index += 1
         elif o.node_type == box_type.BOX_TYPE_FUNCTION:
