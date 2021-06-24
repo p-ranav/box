@@ -2,9 +2,10 @@ import uuid
 
 class Port:
     def __init__(self):
+        self.name = ""
         self.port_type = ""
         self.x = 0
-        self.y = 0
+        self.y = 0        
         self.uuid = None
         self.parent_uuid = None
 

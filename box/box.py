@@ -9,8 +9,14 @@ class Box:
         self.input_ports = []   # list of Port
         self.output_ports = []  # list of Port
         self.children = []      # list of Box
-        self.connections = {}   # src -> dst Ports (guid) between boxes
-                                # {(src.parent_uuid, src.uuid) -> (dst.parent_uuid, dst.uuid)}
+
+        # src -> dst Ports (guid) between boxes
+        # {(src.parent_uuid, src.uuid) -> (dst.parent_uuid, dst.uuid)}
+        self.src2dst_connections = {}
+        # dst -> src Ports (guid) between boxes
+        # {(dst.parent_uuid, dst.uuid) -> (src.parent_uuid, src.uuid)}
+        self.dst2src_connections = {}   
+                                        
 
     def print(self):
         self.box_info.print()
@@ -26,9 +32,9 @@ class Box:
         for child in self.children:
             children_uuid_dict[child.uuid] = child
             
-        if len(self.connections):
+        if len(self.src2dst_connections):
             print('  - Connections:')
-        for src, dst in self.connections.items():
+        for src, dst in self.src2dst_connections.items():
             src_box_uuid = src[0]
             dst_box_uuid = dst[0]
             print('    -', children_uuid_dict[src_box_uuid].box_info.name, '->',\

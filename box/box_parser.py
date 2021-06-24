@@ -6,20 +6,22 @@ from operator import attrgetter
 from port import Port
 import uuid
 
-BOX_TOKEN_TOP_LEFT      = '┌'
-BOX_TOKEN_TOP_RIGHT     = '┐'
-BOX_TOKEN_BOTTOM_LEFT   = '└'
-BOX_TOKEN_BOTTOM_RIGHT  = '┘'
-BOX_TOKEN_HORIZONTAL    = '─'
-BOX_TOKEN_VERTICAL      = '│'
-BOX_TOKEN_INPUT_PORT    = '┼' 
-BOX_TOKEN_OUTPUT_PORT   = '┼'
-BOX_TOKEN_FUNCTION      = 'ƒ'
-BOX_TOKEN_COMMENT       = '/*...*/'
-BOX_TOKEN_SINGLE_QUOTE  = '\''
-BOX_TOKEN_DOUBLE_QUOTE  = '"'
-BOX_TOKEN_OPEN_PAREN    = '('
-BOX_TOKEN_CLOSE_PAREN   = ')'
+BOX_TOKEN_TOP_LEFT           = '┌'
+BOX_TOKEN_TOP_RIGHT          = '┐'
+BOX_TOKEN_BOTTOM_LEFT        = '└'
+BOX_TOKEN_BOTTOM_RIGHT       = '┘'
+BOX_TOKEN_HORIZONTAL         = '─'
+BOX_TOKEN_VERTICAL           = '│'
+BOX_TOKEN_INPUT_PORT         = '┼' 
+BOX_TOKEN_OUTPUT_PORT        = '┼'
+BOX_TOKEN_FUNCTION           = 'ƒ'
+BOX_TOKEN_COMMENT            = '/*...*/'
+BOX_TOKEN_SINGLE_QUOTE       = '\''
+BOX_TOKEN_DOUBLE_QUOTE       = '"'
+BOX_TOKEN_OPEN_PAREN         = '('
+BOX_TOKEN_CLOSE_PAREN        = ')'
+BOX_TOKEN_FUNCTION_INPUTS    = 'Inputs'
+BOX_TOKEN_FUNCTION_OUTPUTS   = 'Outputs'
 
 def detect_boxes(filename):
     boxes = []
@@ -163,6 +165,10 @@ def new_box(lines, parent, children):
             assert name[1] == BOX_TOKEN_OPEN_PAREN
             assert name[len(name) - 1] == BOX_TOKEN_CLOSE_PAREN
             parent_box.box_info.name = name[2:len(name) - 1]
+        elif name == BOX_TOKEN_FUNCTION_INPUTS:
+            parent_box.node_type = box_type.BOX_TYPE_FUNCTION_INPUTS
+        elif name == BOX_TOKEN_FUNCTION_OUTPUTS:
+            parent_box.node_type = box_type.BOX_TYPE_FUNCTION_OUTPUTS                        
         elif name == BOX_TOKEN_COMMENT:
             parent_box.node_type = box_type.BOX_TYPE_COMMENT
         elif name.isnumeric():
@@ -279,7 +285,8 @@ def new_box(lines, parent, children):
                     dst_uuid = dst[1]
 
                     # Record the connection between src and destination
-                    parent_box.connections[(src_parent_uuid, src_uuid)] = (dst_parent_uuid, dst_uuid)
+                    parent_box.src2dst_connections[(src_parent_uuid, src_uuid)] = (dst_parent_uuid, dst_uuid)
+                    parent_box.dst2src_connections[(dst_parent_uuid, dst_uuid)] = (src_parent_uuid, src_uuid)
 
                 else:
                     print("Invalid connection from (" + str(x) + ", " + str(y) + ")")
