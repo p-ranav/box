@@ -5,7 +5,7 @@ class Box:
         self.box_info = None
         self.uuid = None
         self.parent_uuid = None
-        self.node_type = ""     # function? constant?
+        self.box_type = ""     # function? constant?
         self.input_ports = []   # list of Port
         self.output_ports = []  # list of Port
         self.children = []      # list of Box
@@ -22,7 +22,7 @@ class Box:
         self.box_info.print()
         print('  - UUID         ', self.uuid)
         print('  - Parent UUID  ', self.parent_uuid)        
-        print('  - Node Type    ', self.node_type)
+        print('  - Box Type     ', self.box_type)
         for p in self.input_ports:
             p.print()
         for p in self.output_ports:

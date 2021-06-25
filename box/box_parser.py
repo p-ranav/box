@@ -161,23 +161,23 @@ def new_box(lines, parent, children):
     name = parent_box.box_info.name
     if len(name):
         if name[0] == BOX_TOKEN_FUNCTION:
-            parent_box.node_type = box_type.BOX_TYPE_FUNCTION
+            parent_box.box_type = box_type.BOX_TYPE_FUNCTION
             assert name[1] == BOX_TOKEN_OPEN_PAREN
             assert name[len(name) - 1] == BOX_TOKEN_CLOSE_PAREN
             parent_box.box_info.name = name[2:len(name) - 1]
         elif name == BOX_TOKEN_FUNCTION_INPUTS:
-            parent_box.node_type = box_type.BOX_TYPE_FUNCTION_INPUTS
+            parent_box.box_type = box_type.BOX_TYPE_FUNCTION_INPUTS
         elif name == BOX_TOKEN_FUNCTION_OUTPUTS:
-            parent_box.node_type = box_type.BOX_TYPE_FUNCTION_OUTPUTS                        
+            parent_box.box_type = box_type.BOX_TYPE_FUNCTION_OUTPUTS                        
         elif name == BOX_TOKEN_COMMENT:
-            parent_box.node_type = box_type.BOX_TYPE_COMMENT
+            parent_box.box_type = box_type.BOX_TYPE_COMMENT
         elif name.isnumeric():
-            parent_box.node_type = box_type.BOX_TYPE_NUMERIC
+            parent_box.box_type = box_type.BOX_TYPE_NUMERIC
         elif name[0] == BOX_TOKEN_SINGLE_QUOTE:
-            parent_box.node_type = box_type.BOX_TYPE_STRING_LITERAL
+            parent_box.box_type = box_type.BOX_TYPE_STRING_LITERAL
             assert name[len(name) - 1] == BOX_TOKEN_SINGLE_QUOTE
         elif name[0] == BOX_TOKEN_DOUBLE_QUOTE:
-            parent_box.node_type = box_type.BOX_TYPE_STRING_LITERAL
+            parent_box.box_type = box_type.BOX_TYPE_STRING_LITERAL
             assert name[len(name) - 1] == BOX_TOKEN_DOUBLE_QUOTE            
 
     # Save input ports
