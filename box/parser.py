@@ -24,8 +24,14 @@ class Parser:
     
     def __init__(self, path):
         self.path = path
+
+        # {(x1, y1): <Box_1>, (x2, y2): <Box_2>, ...}
+        self.port_box_map = {}
+
         self.lines = self.__read_into_lines(path)
         self.boxes = self.__find_boxes()
+        # The box from where control flow starts
+        self.starting_box = self.__find_start_of_control_flow()        
 
     def __read_into_lines(self, path):
         lines = []
@@ -268,11 +274,35 @@ class Parser:
                                 j_start = top_left[1] + 1
                                                             
                             # Save the box meta
-                            result.append(Parser.Box(box_header, box_contents,
-                                                     top_left, top_right, bottom_right, bottom_left,
-                                                     reversed(input_data_flow_ports),
-                                                     reversed(input_control_flow_ports),
-                                                     output_data_flow_ports,
-                                                     output_control_flow_ports))
+                            new_box = Parser.Box(box_header, box_contents,
+                                                 top_left, top_right, bottom_right, bottom_left,
+                                                 list(reversed(input_data_flow_ports)),
+                                                 list(reversed(input_control_flow_ports)),
+                                                 output_data_flow_ports,
+                                                 output_control_flow_ports)
+
+                            # Save ports to a Parser-level map
+                            for port in new_box.input_data_flow_ports:
+                                self.port_box_map[port] = new_box
+                            for port in new_box.input_control_flow_ports:
+                                self.port_box_map[port] = new_box
+                            for port in new_box.output_data_flow_ports:
+                                self.port_box_map[port] = new_box
+                            for port in new_box.output_control_flow_ports:
+                                self.port_box_map[port] = new_box
+
+                            # Save as a valid box
+                            result.append(new_box)
 
         return result
+
+    def __find_start_of_control_flow(self):
+        # Find the box with no input control flow ports
+        # and one output control flow port
+        result = [box for box in self.boxes
+                  if len(box.input_control_flow_ports) == 0
+                  and len(box.output_control_flow_ports) == 1]
+        if len(result) != 1:
+            # TODO: Log a DEBUG error
+            pass
+        return result[0]
