@@ -13,8 +13,8 @@ class Parser:
     BOX_TOKEN_COMMENT            = '/*...*/'
     BOX_TOKEN_SINGLE_QUOTE       = '\''
     BOX_TOKEN_DOUBLE_QUOTE       = '"'
-    BOX_TOKEN_OPEN_PAREN         = '('
-    BOX_TOKEN_CLOSE_PAREN        = ')'
+    BOX_TOKEN_LEFT_PAREN         = '('
+    BOX_TOKEN_RIGHT_PAREN        = ')'
     BOX_TOKEN_KEYWORD_BRANCH     = '[Branch]'    
     BOX_TOKEN_KEYWORD_FOR_LOOP   = '[For Loop]'
     BOX_TOKEN_KEYWORD_RETURN     = '[Return]'    
@@ -69,6 +69,23 @@ class Parser:
             self.input_control_flow_ports = input_control_flow_ports
             self.output_data_flow_ports = output_data_flow_ports
             self.output_control_flow_ports = output_control_flow_ports
+
+    def __is_valid_box_header(self, header):
+        result = False
+
+        if header.startswith(Parser.BOX_TOKEN_FUNCTION):
+            if len(header) > 3:
+                # 'ƒ' '(' <name> ')'
+                if header[1] == Parser.BOX_TOKEN_LEFT_PAREN:
+                    if header[len(header) - 1] == Parser.BOX_TOKEN_RIGHT_PAREN:
+                        result = True
+        elif header in [Parser.BOX_TOKEN_KEYWORD_BRANCH,
+                        Parser.BOX_TOKEN_KEYWORD_FOR_LOOP,
+                        Parser.BOX_TOKEN_KEYWORD_RETURN,
+                        Parser.BOX_TOKEN_KEYWORD_SET]:
+            # Valid keyword
+            result = True
+        return result
 
     class BoxIterator:
         # Class with functions to enable navigating around a box
@@ -140,6 +157,11 @@ class Parser:
                 while it.current() and it.current() != Parser.BOX_TOKEN_HORIZONTAL:
                     box_header += it.current()
                     it.right()
+
+                if not self.__is_valid_box_header(box_header):
+                    # This is not a valid box
+                    # TODO: Log a DEBUG error
+                    continue                    
 
             while it.current() == Parser.BOX_TOKEN_HORIZONTAL:
                 it.right()
@@ -244,8 +266,7 @@ class Parser:
                                 box_contents += "\n"
                                 i_start += 1
                                 j_start = top_left[1] + 1
-                            
-
+                                                            
                             # Save the box meta
                             result.append(Parser.Box(box_header, box_contents,
                                                      top_left, top_right, bottom_right, bottom_left,
