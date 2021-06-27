@@ -36,13 +36,6 @@ class Parser:
         # <Box_first> - The box from where control flow starts
         self.starting_box = self.__find_start_of_control_flow()
 
-        self.allowed_number_of_output_control_flow_ports = {
-            Parser.BOX_TOKEN_KEYWORD_BRANCH: 2,
-            Parser.BOX_TOKEN_KEYWORD_FOR_LOOP: 2,
-            Parser.BOX_TOKEN_KEYWORD_RETURN: 0,
-            Parser.BOX_TOKEN_KEYWORD_SET: 1
-        }
-
         # List of boxes - Starting from the first box
         # and reaching the final box
         self.flow_of_control = self.__find_order_of_operations(self.starting_box, True)
@@ -181,7 +174,7 @@ class Parser:
                 if not self.__is_valid_box_header(box_header):
                     # This is not a valid box
                     # TODO: Log a DEBUG error
-                    continue                    
+                    continue
 
             while it.current() == Parser.BOX_TOKEN_HORIZONTAL:
                 it.right()
@@ -371,6 +364,24 @@ class Parser:
                 elif direction == "down":
                     it.right()
                     direction = "right"
+            elif it.current() == Parser.BOX_TOKEN_INPUT_PORT:
+                # Keep going in the direction we were going
+                # This indicates lines crossing over each other
+                if direction == "left":
+                    it.left()
+                elif direction == "right":
+                    it.right()
+                elif direction == "up":
+                    it.up()
+                elif direction == "down":
+                    it.down()
+            elif it.current() == Parser.BOX_TOKEN_DATA_FLOW_PORT or\
+                 it.current() == Parser.BOX_TOKEN_CONTROL_FLOW_PORT:
+                # We've reached the destination
+                # Go back left by one position to land on the interface
+                # and arrest further movement
+                it.left()
+                break
             else:
                 break
 
@@ -422,6 +433,8 @@ class Parser:
         elif is_function and len(box.input_control_flow_ports) == 1:
             return Parser.FunctionCallControlFlow(box)
         else:
+            # TODO: Throw an error
+            # Unrecognized box type
             return box
 
     def __find_order_of_operations(self, start, global_first_box = True):
@@ -432,8 +445,8 @@ class Parser:
         # Find connections
         # Find control flow boxes, e.g., `Branch`, `For loop` etc.
 
-        # Save the first box
-        result.append(self.__create_control_flow_wrapper(start))
+        # Save the input box
+        result.append(self.__create_control_flow_wrapper(start))            
 
         if global_first_box and len(start.output_control_flow_ports) != 1:
             # Possibilities:
@@ -446,31 +459,24 @@ class Parser:
             # Just return early
             return result
         else:
+            
             start_port = start.output_control_flow_ports[0]
             end_port = self.__find_destination_connection(start_port)
             end_box = None
+
             if end_port in self.port_box_map:
                 end_box = self.port_box_map[end_port]
             else:
                 return result
             
             # This is the second box
-            result.append(self.__create_control_flow_wrapper(end_box))
-
             start = end_box
 
             while True:
-                # Check if number of output_control_flow_ports is valid for this box
-                num_output_control_flow_ports = len(start.output_control_flow_ports)
-
-                if start.box_header in self.allowed_number_of_output_control_flow_ports:
-                    if num_output_control_flow_ports != self.allowed_number_of_output_control_flow_ports[start.box_header]:
-                        # TODO: Report error and exit
-                        break
-                else:
-                    if num_output_control_flow_ports != 1:
-                        # TODO: Report error and exit
-                        break
+                if len(start.output_control_flow_ports) == 0:
+                    # End of control flow
+                    result.append(self.__create_control_flow_wrapper(start))
+                    return result
 
                 is_math_operation = (start.box_header == "")
                 is_branch = (start.box_header == Parser.BOX_TOKEN_KEYWORD_BRANCH)
@@ -479,14 +485,17 @@ class Parser:
                 is_set = (start.box_header == Parser.BOX_TOKEN_KEYWORD_SET)
 
                 if is_math_operation:
+                    assert(len(start.output_control_flow_ports) == 1)
                     # save and continue
                     result.append(Parser.SimpleOperationControlFlow(start))
+                    
                     start_port = start.output_control_flow_ports[0]
                     end_port = self.__find_destination_connection(start_port)
                     end_box = self.port_box_map[end_port]
                     start = end_box
                     continue
                 elif is_set:
+                    assert(len(start.output_control_flow_ports) <= 1)
                     # save and continue
                     result.append(Parser.SetControlFlow(start))
                     start_port = start.output_control_flow_ports[0]
@@ -495,11 +504,13 @@ class Parser:
                     start = end_box
                     continue
                 elif is_return:
+                    assert(len(start.output_control_flow_ports) == 0)
                     # This is the end
                     # Stop here and return
                     result.append(Parser.ReturnControlFlow(start))
                     break
                 elif is_branch:
+                    assert(len(start.output_control_flow_ports) == 2)
                     # Two output control flow ports here
                     # The `True` case, and the `False` case
                     true_output_port = start.output_control_flow_ports[0]
@@ -519,6 +530,7 @@ class Parser:
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
                 elif is_for_loop:
+                    assert(len(start.output_control_flow_ports) == 2)
                     # Two output control flow ports here
                     # The `Loop body` case, and the `Completed` case
                     loop_body_output_port = start.output_control_flow_ports[0]
@@ -534,11 +546,30 @@ class Parser:
                     completed_case_control_flow = self.__find_order_of_operations(completed_case_start_box, False)
 
                     result.append(Parser.ForLoopControlFlow(loop_body_case_control_flow))
-
                     result.extend(completed_case_control_flow)
 
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
 
+        return result
+        
+
+    def to_python(self, indent = "    "):
+        assert(len(self.flow_of_control) > 1)
+        first = self.flow_of_control[0]
+        assert(type(first) == type(Parser.FunctionDeclarationControlFlow(None)))
+
+        # Function signature
+        result = "def "
+        function_name = first.box.box_header
+        function_name = function_name[2:len(function_name) - 1]
+        result += function_name # TODO: Sanitize function name for use as a Python function name
+
+        result += "("
+
+        result += ")"
+
+        result += ":\n"
+        
         return result
         
