@@ -1,3 +1,4 @@
+
 class Parser:
     BOX_TOKEN_TOP_LEFT           = '┌'
     BOX_TOKEN_TOP_RIGHT          = '┐'
@@ -14,9 +15,10 @@ class Parser:
     BOX_TOKEN_DOUBLE_QUOTE       = '"'
     BOX_TOKEN_OPEN_PAREN         = '('
     BOX_TOKEN_CLOSE_PAREN        = ')'
-    BOX_TOKEN_KEYWORD_RETURN     = 'Return'
-    BOX_TOKEN_KEYWORD_FOR_LOOP   = 'For Loop'
-    BOX_TOKEN_KEYWORD_BRANCH     = 'Branch'
+    BOX_TOKEN_KEYWORD_BRANCH     = '[Branch]'    
+    BOX_TOKEN_KEYWORD_FOR_LOOP   = '[For Loop]'
+    BOX_TOKEN_KEYWORD_RETURN     = '[Return]'    
+    BOX_TOKEN_KEYWORD_SET        = '[Set]'    
     BOX_TOKEN_DATA_FLOW_PORT     = '○'
     BOX_TOKEN_CONTROL_FLOW_PORT  = '►'
     
