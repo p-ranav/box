@@ -1,14 +1,13 @@
-from box_parser import detect_boxes, build_parse_tree
-from transpiler import Transpiler
+from box.parser import Parser
+import os
 import sys
 
 def main(filename):
-    lines, boxes = detect_boxes(filename)
-    root = build_parse_tree(lines, boxes)
-    transpiler = Transpiler(root)
-    
-    if transpiler.is_function(root):
-        print(transpiler.to_python())
+    path = os.path.join(os.getcwd(), filename)
+    parser = Parser(path)
+
+    for box in parser.boxes:
+        print(box.box_header, box.top_left, box.top_right, box.bottom_right, box.bottom_left)
 
 if __name__ == "__main__":
     main(sys.argv[1])
