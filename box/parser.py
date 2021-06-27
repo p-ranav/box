@@ -412,6 +412,31 @@ class Parser:
         def __init__(self, box):
             self.box = box
 
+        def to_python(self):
+            # Function signature
+            result = "def "
+            function_name = self.box.box_header
+            function_name = function_name[2:len(function_name) - 1]
+            result += function_name # TODO: Sanitize function name for use as a Python function name
+            
+            result += "("
+
+            box_contents = self.box.box_contents.split("\n")
+
+            parameters = []
+            for line in self.box.box_contents.split("\n"):
+                if line.endswith(Parser.BOX_TOKEN_DATA_FLOW_PORT):
+                    parameters.append(line[:-1].strip())
+
+            for i, param in enumerate(parameters):
+                result += param
+                if i < len(parameters) - 1:
+                    result += ", "
+
+            result += "):\n"            
+            return result
+        
+
     class FunctionCallControlFlow:
         def __init__(self, box):
             self.box = box            
@@ -559,17 +584,11 @@ class Parser:
         first = self.flow_of_control[0]
         assert(type(first) == type(Parser.FunctionDeclarationControlFlow(None)))
 
-        # Function signature
-        result = "def "
-        function_name = first.box.box_header
-        function_name = function_name[2:len(function_name) - 1]
-        result += function_name # TODO: Sanitize function name for use as a Python function name
+        result = ""
+        result += first.to_python()
 
-        result += "("
-
-        result += ")"
-
-        result += ":\n"
+        # Now add the function body
+        
         
         return result
         
