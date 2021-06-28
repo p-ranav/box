@@ -45,6 +45,8 @@ class Parser:
         # {<Box_1>: "Box_1_foobar_result", <Box_2>: "Box_2_baz_result", ...}
         self.temp_results = {}
 
+        self.function_name = ""
+
     def __read_into_lines(self, path):
         lines = []
         with open(path, 'r') as file:
@@ -648,15 +650,20 @@ class Parser:
             return result                     
 
     class FunctionDeclarationNode:
-        def __init__(self, box):
+        def __init__(self, box, parser):
             self.box = box
+            self.parser = parser
 
         def to_python(self, indent = "    "):
             # Function signature
             result = "def "
             function_name = self.box.box_header
             function_name = function_name[2:len(function_name) - 1]
-            result += function_name            
+            function_name = re.sub('[\W_]', '', function_name)
+            result += function_name
+
+            self.parser.function_name = function_name
+            
             result += "("
             box_contents = self.box.box_contents.split("\n")
             
@@ -693,7 +700,7 @@ class Parser:
         elif is_set:
             return Parser.SetNode(box, self)
         elif is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
-            return Parser.FunctionDeclarationNode(box)
+            return Parser.FunctionDeclarationNode(box, self)
         elif is_function and len(box.input_control_flow_ports) == 1:
             return Parser.FunctionCallNode(box)
         else:
@@ -820,7 +827,7 @@ class Parser:
     def to_python(self, indent = "    "):
         assert(len(self.flow_of_control) > 1)
         first = self.flow_of_control[0]
-        assert(type(first) == type(Parser.FunctionDeclarationNode(None)))
+        assert(type(first) == type(Parser.FunctionDeclarationNode(None, self)))
 
         result = ""
         result += first.to_python()

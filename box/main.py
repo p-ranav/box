@@ -1,12 +1,39 @@
+import argparse
 from box.parser import Parser
 import os
-import sys
 
-def main(filename):
+def main(args):
+
+    filename = args.path
+    eval_args = args.e
+    verbosity = args.v
+    
     path = os.path.join(os.getcwd(), filename)
     parser = Parser(path)
     code = parser.to_python()
-    print(code)
 
-if __name__ == "__main__":
-    main(sys.argv[1])
+    function_name = parser.function_name
+
+    code += "\nprint(" + function_name + "("
+
+    if len(eval_args) > 0:
+        for i, arg in enumerate(eval_args):
+            code += arg
+            if i < len(eval_args) - 1:
+                code += ", "
+    
+    code += "))"
+
+    if (args.v):
+        print(code)
+
+    exec(code)
+
+if __name__ == "__main__":    
+    parser = argparse.ArgumentParser(description='Box interpreter')
+    parser.add_argument("path", help="Path to box file")
+    parser.add_argument('-v', action="store_true", help='Toggle verbosity')
+    parser.add_argument('-e', nargs="+", help='Arguments to pass to box function')
+    args = parser.parse_args()
+    main(args)
+
