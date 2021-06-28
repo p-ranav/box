@@ -10,24 +10,7 @@ def main(args):
     
     path = os.path.join(os.getcwd(), filename)
     parser = Parser(path)
-    code = parser.to_python()
-
-    function_name = parser.function_name
-    
-    code += "\n"
-    if parser.has_return:
-        code += "print("
-    code += function_name + "("
-
-    if eval_args:
-        for i, arg in enumerate(eval_args):
-            code += arg
-            if i < len(eval_args) - 1:
-                code += ", "
-    
-    code += ")"
-    if parser.has_return:
-        code += ")"
+    code = parser.to_python(args.e)
 
     if (args.v):
         print(code)

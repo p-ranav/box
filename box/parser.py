@@ -46,7 +46,6 @@ class Parser:
         self.temp_results = {}
 
         self.function_name = ""
-        self.has_return = self.__has_return_boxes()
 
     def __read_into_lines(self, path):
         lines = []
@@ -854,7 +853,7 @@ class Parser:
 
         return result
 
-    def to_python(self, indent = "    "):
+    def to_python(self, eval_args, indent = "    "):
         assert(len(self.flow_of_control) > 1)
         first = self.flow_of_control[0]
         assert(type(first) == type(Parser.FunctionDeclarationNode(None, self)))
@@ -865,6 +864,23 @@ class Parser:
         # Now add the function body
         for box in self.flow_of_control[1:]:
             result += box.to_python()
+
+        # If evaluation is required, call the function
+        has_return = self.__has_return_boxes()
+        result += "\n"
+        if has_return:
+            result += "print("
+        result += self.function_name + "("
+
+        if eval_args:
+            for i, arg in enumerate(eval_args):
+                result += arg
+                if i < len(eval_args) - 1:
+                    result += ", "
+    
+        result += ")"
+        if has_return:
+            result += ")"
         
         return result
         
