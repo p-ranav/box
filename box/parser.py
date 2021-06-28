@@ -1,3 +1,4 @@
+import uuid
 
 class Parser:
     BOX_TOKEN_TOP_LEFT           = '┌'
@@ -82,6 +83,10 @@ class Parser:
             self.input_control_flow_ports = input_control_flow_ports
             self.output_data_flow_ports = output_data_flow_ports
             self.output_control_flow_ports = output_control_flow_ports
+            self.uuid = uuid.uuid4()
+
+        def uuid_short(self):
+            return str(self.uuid)[:8]
 
     def __is_valid_box_header(self, header):
         result = False
@@ -314,12 +319,18 @@ class Parser:
             pass
         return result[0]
 
-    def __find_destination_connection(self, start_port):
+    def find_destination_connection(self, start_port, direction = "right"):
         it = Parser.BoxIterator(self.lines, start_port)
 
-        # Start by going right
-        direction = "right"
-        it.right()
+        # Start navigation
+        if direction == "right":
+            it.right()
+        elif direction == "left":
+            it.left()
+        else:
+            # TODO: report error
+            # Not allowed
+            pass
 
         while True:
             if it.current() == Parser.BOX_TOKEN_HORIZONTAL:
@@ -378,37 +389,134 @@ class Parser:
             elif it.current() == Parser.BOX_TOKEN_DATA_FLOW_PORT or\
                  it.current() == Parser.BOX_TOKEN_CONTROL_FLOW_PORT:
                 # We've reached the destination
-                # Go back left by one position to land on the interface
+                # Go back left/right by one position to land on the interface
                 # and arrest further movement
-                it.left()
+                if direction == "right":
+                    it.left()
+                elif direction == "left":
+                    it.right()
                 break
             else:
                 break
 
         return it.pos()
 
-    class SimpleOperationControlFlow:
+    class OperatorNode:
+
+        # Arithmetic operators
+        OPERATOR_TOKEN_ADD                   = "+"
+        OPERATOR_TOKEN_SUBTRACT              = "+"
+        OPERATOR_TOKEN_MULTIPLY              = "*"
+        OPERATOR_TOKEN_DIVIDE                = "/"
+        OPERATOR_TOKEN_MODULO                = "%"
+        OPERATOR_TOKEN_EXPONENTIATION        = "**"
+        OPERATOR_TOKEN_FLOOR_DIVISION        = "//"                
+
+        # Logical operators
+        OPERATOR_TOKEN_AND                   = "&&"
+        OPERATOR_TOKEN_OR                    = "||"        
+        OPERATOR_TOKEN_NOT                   = "!"
+
+        # Comparison operators
+        OPERATOR_TOKEN_GREATER_THAN          = ">"
+        OPERATOR_TOKEN_GREATER_THAN_OR_EQUAL = ">="
+        OPERATOR_TOKEN_LESS_THAN             = "<"
+        OPERATOR_TOKEN_LESS_THAN_OR_EQUAL    = "<="
+        OPERATOR_TOKEN_EQUAL                 = "=="
+        OPERATOR_TOKEN_NOT_EQUAL             = "!="
+
+        UNARY_OPERATORS = [
+            OPERATOR_TOKEN_NOT
+        ]
+
+        BINARY_OPERATORS = [
+            OPERATOR_TOKEN_ADD, OPERATOR_TOKEN_SUBTRACT,
+            OPERATOR_TOKEN_MULTIPLY, OPERATOR_TOKEN_DIVIDE,
+            OPERATOR_TOKEN_MODULO, OPERATOR_TOKEN_EXPONENTIATION,
+            OPERATOR_TOKEN_FLOOR_DIVISION,
+
+            OPERATOR_TOKEN_AND, OPERATOR_TOKEN_OR,
+            OPERATOR_TOKEN_GREATER_THAN, OPERATOR_TOKEN_GREATER_THAN_OR_EQUAL,
+            OPERATOR_TOKEN_LESS_THAN, OPERATOR_TOKEN_LESS_THAN_OR_EQUAL,
+            OPERATOR_TOKEN_EQUAL, OPERATOR_TOKEN_NOT_EQUAL
+            ]
+        
+        def __init__(self, box, parser):
+            self.box = box
+            self.parser = parser
+            self.__result_prefix = "op"
+
+        def __sanitize_box_contents(self, box_contents):
+            box_contents = box_contents.strip()
+            box_contents = box_contents.replace(Parser.BOX_TOKEN_DATA_FLOW_PORT, "")
+            box_contents = box_contents.replace(Parser.BOX_TOKEN_CONTROL_FLOW_PORT, "")
+            box_contents = box_contents.replace(" ", "")
+            box_contents = box_contents.replace("\t", "")
+            box_contents = box_contents.replace("\n", "")
+            return box_contents
+
+        def to_python(self, indent = "    "):
+            result = ""
+            
+            # Check number of input ports
+            box_contents = self.__sanitize_box_contents(self.box.box_contents)
+
+            operator = box_contents
+
+            if operator in Parser.OperatorNode.UNARY_OPERATORS:
+                assert(len(self.box.input_data_flow_ports) == 1)
+                pass
+            elif operator in Parser.OperatorNode.BINARY_OPERATORS:
+                # There must be exactly 2 input data flow ports for this node
+                assert(len(self.box.input_data_flow_ports) == 2)
+
+                input_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+                input_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
+
+                lhs = self.__sanitize_box_contents(self.parser.port_box_map[input_0].box_contents)
+                rhs = self.__sanitize_box_contents(self.parser.port_box_map[input_1].box_contents)
+
+                # Find the two input boxes and parse their contents
+                # Then set result to:
+                #   <box_1_contents> <operator> <box_2_contents>
+                #
+                # Create a variable to store the result
+
+                result = indent + self.__result_prefix + "_" + self.box.uuid_short() + "_result = "
+                result += "(" + lhs + " " + operator + " " + rhs + ")"
+
+            return result
+
+    class SetNode:
         def __init__(self, box):
             self.box = box
 
-    class SetControlFlow:
-        def __init__(self, box):
-            self.box = box
+        def to_python(self):
+            return ""           
 
-    class BranchControlFlow:
+    class BranchNode:
         def __init__(self, true_case, false_case):
             self.true_case = true_case
             self.false_case = false_case
 
-    class ForLoopControlFlow:
+        def to_python(self):
+            return ""
+
+    class ForLoopNode:
         def __init__(self, loop_body):
             self.loop_body = loop_body
 
-    class ReturnControlFlow:
+        def to_python(self):
+            return ""                       
+
+    class ReturnNode:
         def __init__(self, box):
             self.box = box
 
-    class FunctionDeclarationControlFlow:
+        def to_python(self):
+            return ""                       
+
+    class FunctionDeclarationNode:
         def __init__(self, box):
             self.box = box
 
@@ -437,7 +545,7 @@ class Parser:
             return result
         
 
-    class FunctionCallControlFlow:
+    class FunctionCallNode:
         def __init__(self, box):
             self.box = box            
 
@@ -448,15 +556,15 @@ class Parser:
         is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
 
         if is_math_operation:
-            return Parser.SimpleOperationControlFlow(box)
+            return Parser.OperatorNode(box, self)
         elif is_return:
-            return Parser.ReturnControlFlow(box)
+            return Parser.ReturnNode(box)
         elif is_set:
-            return Parser.SetControlFlow(box)
+            return Parser.SetNode(box)
         elif is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
-            return Parser.FunctionDeclarationControlFlow(box)
+            return Parser.FunctionDeclarationNode(box)
         elif is_function and len(box.input_control_flow_ports) == 1:
-            return Parser.FunctionCallControlFlow(box)
+            return Parser.FunctionCallNode(box)
         else:
             # TODO: Throw an error
             # Unrecognized box type
@@ -486,7 +594,7 @@ class Parser:
         else:
             
             start_port = start.output_control_flow_ports[0]
-            end_port = self.__find_destination_connection(start_port)
+            end_port = self.find_destination_connection(start_port)
             end_box = None
 
             if end_port in self.port_box_map:
@@ -512,19 +620,19 @@ class Parser:
                 if is_math_operation:
                     assert(len(start.output_control_flow_ports) == 1)
                     # save and continue
-                    result.append(Parser.SimpleOperationControlFlow(start))
+                    result.append(Parser.OperatorNode(start, self))
                     
                     start_port = start.output_control_flow_ports[0]
-                    end_port = self.__find_destination_connection(start_port)
+                    end_port = self.find_destination_connection(start_port)
                     end_box = self.port_box_map[end_port]
                     start = end_box
                     continue
                 elif is_set:
                     assert(len(start.output_control_flow_ports) <= 1)
                     # save and continue
-                    result.append(Parser.SetControlFlow(start))
+                    result.append(Parser.SetNode(start))
                     start_port = start.output_control_flow_ports[0]
-                    end_port = self.__find_destination_connection(start_port)
+                    end_port = self.find_destination_connection(start_port)
                     end_box = self.port_box_map[end_port]
                     start = end_box
                     continue
@@ -532,7 +640,7 @@ class Parser:
                     assert(len(start.output_control_flow_ports) == 0)
                     # This is the end
                     # Stop here and return
-                    result.append(Parser.ReturnControlFlow(start))
+                    result.append(Parser.ReturnNode(start))
                     break
                 elif is_branch:
                     assert(len(start.output_control_flow_ports) == 2)
@@ -541,8 +649,8 @@ class Parser:
                     true_output_port = start.output_control_flow_ports[0]
                     false_output_port = start.output_control_flow_ports[1]                
 
-                    true_case_start_port = self.__find_destination_connection(true_output_port)
-                    false_case_start_port = self.__find_destination_connection(false_output_port)
+                    true_case_start_port = self.find_destination_connection(true_output_port)
+                    false_case_start_port = self.find_destination_connection(false_output_port)
 
                     true_case_start_box = self.port_box_map[true_case_start_port]
                     false_case_start_box = self.port_box_map[false_case_start_port]
@@ -550,7 +658,7 @@ class Parser:
                     true_case_control_flow = self.__find_order_of_operations(true_case_start_box, False)
                     false_case_control_flow = self.__find_order_of_operations(false_case_start_box, False)
 
-                    result.append(Parser.BranchControlFlow(true_case_control_flow, false_case_control_flow))
+                    result.append(Parser.BranchNode(true_case_control_flow, false_case_control_flow))
 
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
@@ -561,8 +669,8 @@ class Parser:
                     loop_body_output_port = start.output_control_flow_ports[0]
                     completed_output_port = start.output_control_flow_ports[1]
 
-                    loop_body_case_start_port = self.__find_destination_connection(loop_body_output_port)
-                    completed_case_start_port = self.__find_destination_connection(completed_output_port)
+                    loop_body_case_start_port = self.find_destination_connection(loop_body_output_port)
+                    completed_case_start_port = self.find_destination_connection(completed_output_port)
 
                     loop_body_case_start_box = self.port_box_map[loop_body_case_start_port]
                     completed_case_start_box = self.port_box_map[completed_case_start_port]
@@ -570,7 +678,7 @@ class Parser:
                     loop_body_case_control_flow = self.__find_order_of_operations(loop_body_case_start_box, False)
                     completed_case_control_flow = self.__find_order_of_operations(completed_case_start_box, False)
 
-                    result.append(Parser.ForLoopControlFlow(loop_body_case_control_flow))
+                    result.append(Parser.ForLoopNode(loop_body_case_control_flow))
                     result.extend(completed_case_control_flow)
 
                     # Branch Control flow should break this loop since we cannot update `start`
@@ -582,13 +690,14 @@ class Parser:
     def to_python(self, indent = "    "):
         assert(len(self.flow_of_control) > 1)
         first = self.flow_of_control[0]
-        assert(type(first) == type(Parser.FunctionDeclarationControlFlow(None)))
+        assert(type(first) == type(Parser.FunctionDeclarationNode(None)))
 
         result = ""
         result += first.to_python()
 
         # Now add the function body
-        
+        for box in self.flow_of_control[1:]:
+            result += box.to_python()
         
         return result
         
