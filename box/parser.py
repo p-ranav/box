@@ -1,3 +1,4 @@
+import re
 import uuid
 
 class Parser:
@@ -404,6 +405,43 @@ class Parser:
 
         return it.pos()
 
+    def sanitize_box_contents(self, box_contents):
+        box_contents = box_contents.strip()
+        box_contents = box_contents.replace(Parser.BOX_TOKEN_DATA_FLOW_PORT, "")
+        box_contents = box_contents.replace(Parser.BOX_TOKEN_CONTROL_FLOW_PORT, "")
+        box_contents = box_contents.replace(" ", "")
+        box_contents = box_contents.replace("\t", "")
+        box_contents = box_contents.replace("\n", "")
+        return box_contents
+
+    def get_output_name(self, box, port):
+        result = ""
+
+        is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
+        is_constant_or_variable = (box.box_header == "")
+        
+        if is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
+            # This is a function declaration box
+            # This box could have multiple parameters
+            col_start = box.top_left[1] + 1
+            col_end = box.top_right[1]
+            row = port[0]
+
+            for col in range(col_start, col_end):
+                result += self.lines[row][col]                
+                result = self.sanitize_box_contents(result)
+                
+        elif is_constant_or_variable:
+            result = self.sanitize_box_contents(box.box_contents)
+            
+        elif is_function_call:
+            pass
+        
+        elif is_math_operator:
+            result = self.temp_result[box]
+
+        return result
+
     class OperatorNode:
 
         # Arithmetic operators
@@ -449,20 +487,11 @@ class Parser:
             self.parser = parser
             self.__result_prefix = "op"
 
-        def __sanitize_box_contents(self, box_contents):
-            box_contents = box_contents.strip()
-            box_contents = box_contents.replace(Parser.BOX_TOKEN_DATA_FLOW_PORT, "")
-            box_contents = box_contents.replace(Parser.BOX_TOKEN_CONTROL_FLOW_PORT, "")
-            box_contents = box_contents.replace(" ", "")
-            box_contents = box_contents.replace("\t", "")
-            box_contents = box_contents.replace("\n", "")
-            return box_contents
-
         def to_python(self, indent = "    "):
             result = ""
             
             # Check number of input ports
-            box_contents = self.__sanitize_box_contents(self.box.box_contents)
+            box_contents = self.parser.sanitize_box_contents(self.box.box_contents)
 
             operator = box_contents
 
@@ -476,46 +505,10 @@ class Parser:
                 input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
                 input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
 
-                # If FunctionDeclarationNode:
-                # - Need to find the correct parameter from the previous box (which could have multiple params)
-                # If Output of function:
-                # - Need to figure out what the variable name is
-                # If output of operator:
-                # - Need to figure out what the name of the operator_result is
-
                 operator_arguments = []
                 for i, port in enumerate([input_port_0, input_port_1]):
-
-                    # Find the box for this port
                     box = self.parser.port_box_map[port]
-                    
-                    is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
-                    is_constant_or_variable = (box.box_header == "")
-                    
-                    if is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
-                        # This is a function declaration box
-                        # This box could have multiple parameters
-                        col_start = box.top_left[1] + 1
-                        col_end = box.top_right[1]
-                        row = port[0]
-
-                        parameter_name = ""
-                        for col in range(col_start, col_end):
-                            parameter_name += self.parser.lines[row][col]
-
-                        parameter_name = self.__sanitize_box_contents(parameter_name)
-
-                        operator_arguments.append(parameter_name)
-
-                    elif is_constant_or_variable:
-                        parameter_name = self.__sanitize_box_contents(box.box_contents)
-                        operator_arguments.append(parameter_name)
-
-                    elif is_function_call:
-                        pass
-
-                    elif is_math_operator:
-                        pass
+                    operator_arguments.append(self.parser.get_output_name(box, port))
                         
                 lhs, rhs = operator_arguments
 
@@ -534,11 +527,34 @@ class Parser:
             return result
 
     class SetNode:
-        def __init__(self, box):
+        def __init__(self, box, parser):
             self.box = box
+            self.parser = parser
 
         def to_python(self, indent = "    "):
-            return ""           
+            assert(len(self.box.input_data_flow_ports) == 2)
+
+            input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+            input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
+
+            operator_arguments = []
+            for i, port in enumerate([input_port_0, input_port_1]):
+                box = self.parser.port_box_map[port]
+                operator_arguments.append(self.parser.get_output_name(box, port))
+                
+            lhs, rhs = operator_arguments
+            
+            # Find the two input boxes and parse their contents
+            # Then set result to:
+            #   <box_1_contents> = <box_2_contents>
+            #
+            # Create a variable to store the result                
+            
+            self.parser.temp_results[self.box] = lhs
+            
+            result = indent + lhs + " = " + rhs + "\n"
+
+            return result
 
     class BranchNode:
         def __init__(self, box, true_case, false_case, parser):
@@ -570,7 +586,8 @@ class Parser:
             self.loop_body = loop_body
 
         def to_python(self, indent = "    "):
-            return ""                       
+            result = ""
+            return result                     
 
     class ReturnNode:
         def __init__(self, box, parser):
@@ -578,7 +595,7 @@ class Parser:
             self.parser = parser
 
         def to_python(self, indent = "    "):
-            result = ""
+            result = indent + "return"
 
             return_vals = []
             
@@ -587,6 +604,13 @@ class Parser:
                 input_box = self.parser.port_box_map[input_port]
 
                 # TODO: Get variable/value and append to return_vals
+                return_vals.append(self.parser.get_output_name(input_box, input_port))
+
+            for i, val in enumerate(return_vals):
+                result += " " + val
+                if i < len(return_vals) - 1:
+                    result += ", "
+            result += "\n"
 
             return result                     
 
@@ -599,12 +623,10 @@ class Parser:
             result = "def "
             function_name = self.box.box_header
             function_name = function_name[2:len(function_name) - 1]
-            result += function_name # TODO: Sanitize function name for use as a Python function name
-            
+            result += function_name            
             result += "("
-
             box_contents = self.box.box_contents.split("\n")
-
+            
             parameters = []
             for line in self.box.box_contents.split("\n"):
                 if line.endswith(Parser.BOX_TOKEN_DATA_FLOW_PORT):
@@ -636,7 +658,7 @@ class Parser:
         elif is_return:
             return Parser.ReturnNode(box, self)
         elif is_set:
-            return Parser.SetNode(box)
+            return Parser.SetNode(box, self)
         elif is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
             return Parser.FunctionDeclarationNode(box)
         elif is_function and len(box.input_control_flow_ports) == 1:
@@ -706,7 +728,7 @@ class Parser:
                 elif is_set:
                     assert(len(start.output_control_flow_ports) <= 1)
                     # save and continue
-                    result.append(Parser.SetNode(start))
+                    result.append(Parser.SetNode(start, self))
                     start_port = start.output_control_flow_ports[0]
                     end_port = self.find_destination_connection(start_port)
                     end_box = self.port_box_map[end_port]
