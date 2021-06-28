@@ -13,16 +13,21 @@ def main(args):
     code = parser.to_python()
 
     function_name = parser.function_name
+    
+    code += "\n"
+    if parser.has_return:
+        code += "print("
+    code += function_name + "("
 
-    code += "\nprint(" + function_name + "("
-
-    if len(eval_args) > 0:
+    if eval_args:
         for i, arg in enumerate(eval_args):
             code += arg
             if i < len(eval_args) - 1:
                 code += ", "
     
-    code += "))"
+    code += ")"
+    if parser.has_return:
+        code += ")"
 
     if (args.v):
         print(code)

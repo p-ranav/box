@@ -46,6 +46,7 @@ class Parser:
         self.temp_results = {}
 
         self.function_name = ""
+        self.has_return = self.__has_return_boxes()
 
     def __read_into_lines(self, path):
         lines = []
@@ -407,6 +408,15 @@ class Parser:
 
         return it.pos()
 
+    def __has_return_boxes(self):
+        result = False
+        for box in self.boxes:
+            is_return = (box.box_header == Parser.BOX_TOKEN_KEYWORD_RETURN)
+            if is_return:
+                result = True
+                break
+        return result
+
     def sanitize_box_contents(self, box_contents):
         box_contents = box_contents.strip()
         box_contents = box_contents.replace(Parser.BOX_TOKEN_DATA_FLOW_PORT, "")
@@ -637,8 +647,6 @@ class Parser:
             for port in self.box.input_data_flow_ports:
                 input_port = self.parser.find_destination_connection(port, "left")
                 input_box = self.parser.port_box_map[input_port]
-
-                # TODO: Get variable/value and append to return_vals
                 return_vals.append(self.parser.get_output_data_name(input_box, input_port))
 
             for i, val in enumerate(return_vals):
@@ -681,11 +689,33 @@ class Parser:
             return result
 
     class FunctionCallNode:
-        def __init__(self, box):
+        def __init__(self, box, parser):
             self.box = box
+            self.parser = parser
 
         def to_python(self, indent = "    "):
-            pass
+            result = indent
+
+            function_name = self.box.box_header
+            function_name = function_name[2:len(function_name) - 1]
+            function_name = re.sub('[\W_]', '', function_name)
+            result += function_name            
+ 
+            function_args = []
+            
+            for port in self.box.input_data_flow_ports:
+                input_port = self.parser.find_destination_connection(port, "left")
+                input_box = self.parser.port_box_map[input_port]
+                function_args.append(self.parser.get_output_data_name(input_box, input_port))
+
+            result += "("
+            for i, arg in enumerate(function_args):
+                result += arg
+                if i < len(function_args) - 1:
+                    result += ", "
+
+            result += ")"
+            return result
 
     def __create_control_flow_wrapper(self, box):
         is_math_operation = (box.box_header == "")
@@ -702,7 +732,7 @@ class Parser:
         elif is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
             return Parser.FunctionDeclarationNode(box, self)
         elif is_function and len(box.input_control_flow_ports) == 1:
-            return Parser.FunctionCallNode(box)
+            return Parser.FunctionCallNode(box, self)
         else:
             # TODO: Throw an error
             # Unrecognized box type
