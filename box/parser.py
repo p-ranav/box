@@ -414,12 +414,18 @@ class Parser:
         box_contents = box_contents.replace("\n", "")
         return box_contents
 
+    def is_operator(self, box_contents):
+        text = self.sanitize_box_contents(box_contents)
+        return (text in Parser.OperatorNode.UNARY_OPERATORS or text in Parser.OperatorNode.BINARY_OPERATORS)    
+    
     def get_output_name(self, box, port):
         result = ""
 
+        is_operator = self.is_operator(box.box_contents)
         is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
-        is_constant_or_variable = (box.box_header == "")
-        
+        is_function_call = is_function and len(box.input_control_flow_ports) == 1
+        is_constant_or_variable = (not is_operator) and (box.box_header == "")
+
         if is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
             # This is a function declaration box
             # This box could have multiple parameters
@@ -430,15 +436,12 @@ class Parser:
             for col in range(col_start, col_end):
                 result += self.lines[row][col]                
                 result = self.sanitize_box_contents(result)
-                
+        elif is_function_call:
+            pass                
         elif is_constant_or_variable:
             result = self.sanitize_box_contents(box.box_contents)
-            
-        elif is_function_call:
-            pass
-        
-        elif is_math_operator:
-            result = self.temp_result[box]
+        elif is_operator:
+            result = self.temp_results[box]
 
         return result
 
