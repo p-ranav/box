@@ -2,6 +2,9 @@
 
 `box` is a text-based visual programming language.
 
+![factorial](https://user-images.githubusercontent.com/8450091/123684107-af7abe80-d812-11eb-8faa-f3d736df2233.PNG)
+
+
 ```
  ┌─ƒ(Factorial)───┐                             ┌─[Branch]─────┐                       ┌─[Set]─┐
  │               ►┼──────┐                ┌─────┼►       True ►┼───────────────────────┼►     ►┼─────┐       ┌─[For Loop]───────────┐                       ┌───────┐
