@@ -470,11 +470,51 @@ class Parser:
                 # There must be exactly 2 input data flow ports for this node
                 assert(len(self.box.input_data_flow_ports) == 2)
 
-                input_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
-                input_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
+                input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+                input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
 
-                lhs = self.__sanitize_box_contents(self.parser.port_box_map[input_0].box_contents)
-                rhs = self.__sanitize_box_contents(self.parser.port_box_map[input_1].box_contents)
+                # If FunctionDeclarationNode:
+                # - Need to find the correct parameter from the previous box (which could have multiple params)
+                # If Output of function:
+                # - Need to figure out what the variable name is
+                # If output of operator:
+                # - Need to figure out what the name of the operator_result is
+
+                operator_arguments = []
+                for i, port in enumerate([input_port_0, input_port_1]):
+
+                    # Find the box for this port
+                    box = self.parser.port_box_map[port]
+                    
+                    is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
+                    is_constant_or_variable = (box.box_header == "")
+                    
+                    if is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
+                        # This is a function declaration box
+                        # This box could have multiple parameters
+                        col_start = box.top_left[1] + 1
+                        col_end = box.top_right[1]
+                        row = port[0]
+
+                        parameter_name = ""
+                        for col in range(col_start, col_end):
+                            parameter_name += self.parser.lines[row][col]
+
+                        parameter_name = self.__sanitize_box_contents(parameter_name)
+
+                        operator_arguments.append(parameter_name)
+
+                    elif is_constant_or_variable:
+                        parameter_name = self.__sanitize_box_contents(box.box_contents)
+                        operator_arguments.append(parameter_name)
+
+                    elif is_function_call:
+                        pass
+
+                    elif is_math_operator:
+                        pass
+                        
+                lhs, rhs = operator_arguments
 
                 # Find the two input boxes and parse their contents
                 # Then set result to:
