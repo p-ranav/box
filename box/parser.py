@@ -418,13 +418,15 @@ class Parser:
         text = self.sanitize_box_contents(box_contents)
         return (text in Parser.OperatorNode.UNARY_OPERATORS or text in Parser.OperatorNode.BINARY_OPERATORS)    
     
-    def get_output_name(self, box, port):
+    def get_output_data_name(self, box, port):
         result = ""
 
         is_operator = self.is_operator(box.box_contents)
         is_function = (box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
         is_function_call = is_function and len(box.input_control_flow_ports) == 1
         is_constant_or_variable = (not is_operator) and (box.box_header == "")
+        is_for_loop = (box.box_header == Parser.BOX_TOKEN_KEYWORD_FOR_LOOP)
+        is_set = (box.box_header == Parser.BOX_TOKEN_KEYWORD_SET)
 
         if is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
             # This is a function declaration box
@@ -442,6 +444,10 @@ class Parser:
             result = self.sanitize_box_contents(box.box_contents)
         elif is_operator:
             result = self.temp_results[box]
+        elif is_for_loop:
+            result = self.temp_results[box]
+        elif is_set:
+            result = self.temp_result[box]
 
         return result
 
@@ -511,7 +517,7 @@ class Parser:
                 operator_arguments = []
                 for i, port in enumerate([input_port_0, input_port_1]):
                     box = self.parser.port_box_map[port]
-                    operator_arguments.append(self.parser.get_output_name(box, port))
+                    operator_arguments.append(self.parser.get_output_data_name(box, port))
                         
                 lhs, rhs = operator_arguments
 
@@ -540,12 +546,12 @@ class Parser:
             input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
             input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
 
-            operator_arguments = []
+            set_arguments = []
             for i, port in enumerate([input_port_0, input_port_1]):
                 box = self.parser.port_box_map[port]
-                operator_arguments.append(self.parser.get_output_name(box, port))
+                set_arguments.append(self.parser.get_output_data_name(box, port))
                 
-            lhs, rhs = operator_arguments
+            lhs, rhs = set_arguments
             
             # Find the two input boxes and parse their contents
             # Then set result to:
@@ -576,21 +582,45 @@ class Parser:
 
             result = indent + "if " + condition_result_name + " == True:\n"
             for statement in self.true_case:
-                result += statement.to_python(indent * 2)
+                result += statement.to_python(indent + "    ")
                 
             result += indent + "else:\n"
             for statement in self.false_case:
-                result += statement.to_python(indent * 2)            
+                result += statement.to_python(indent + "    ")            
             
             return result
 
     class ForLoopNode:
-        def __init__(self, loop_body):
+        def __init__(self, box, loop_body, parser):
+            self.box = box
+            self.parser = parser
             self.loop_body = loop_body
 
         def to_python(self, indent = "    "):
-            result = ""
-            return result                     
+            result = indent + "for "
+
+            assert(len(self.box.input_data_flow_ports) == 2)
+
+            input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+            input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
+
+            loop_arguments = []
+            for i, port in enumerate([input_port_0, input_port_1]):
+                box = self.parser.port_box_map[port]
+                loop_arguments.append(self.parser.get_output_data_name(box, port))
+                
+            start_index, end_index = loop_arguments
+
+            current_index = "index_" + self.box.uuid_short()
+            self.parser.temp_results[self.box] = current_index
+
+            result += current_index + " in range(" + start_index + ", " + end_index + " + 1):\n"
+
+            for statement in self.loop_body:
+                result += statement.to_python(indent + "    ")
+            result += "\n"
+            
+            return result
 
     class ReturnNode:
         def __init__(self, box, parser):
@@ -607,7 +637,7 @@ class Parser:
                 input_box = self.parser.port_box_map[input_port]
 
                 # TODO: Get variable/value and append to return_vals
-                return_vals.append(self.parser.get_output_name(input_box, input_port))
+                return_vals.append(self.parser.get_output_data_name(input_box, input_port))
 
             for i, val in enumerate(return_vals):
                 result += " " + val
@@ -779,7 +809,7 @@ class Parser:
                     loop_body_case_control_flow = self.__find_order_of_operations(loop_body_case_start_box, False)
                     completed_case_control_flow = self.__find_order_of_operations(completed_case_start_box, False)
 
-                    result.append(Parser.ForLoopNode(loop_body_case_control_flow))
+                    result.append(Parser.ForLoopNode(start, loop_body_case_control_flow, self))
                     result.extend(completed_case_control_flow)
 
                     # Branch Control flow should break this loop since we cannot update `start`
