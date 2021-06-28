@@ -41,6 +41,9 @@ class Parser:
         # and reaching the final box
         self.flow_of_control = self.__find_order_of_operations(self.starting_box, True)
 
+        # {<Box_1>: "Box_1_foobar_result", <Box_2>: "Box_2_baz_result", ...}
+        self.temp_results = {}
+
     def __read_into_lines(self, path):
         lines = []
         with open(path, 'r') as file:
@@ -520,10 +523,13 @@ class Parser:
                 # Then set result to:
                 #   <box_1_contents> <operator> <box_2_contents>
                 #
-                # Create a variable to store the result
+                # Create a variable to store the result                
+                operator_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
 
-                result = indent + self.__result_prefix + "_" + self.box.uuid_short() + "_result = "
-                result += "(" + lhs + " " + operator + " " + rhs + ")"
+                self.parser.temp_results[self.box] = operator_result
+                
+                result = indent + operator_result + " = "
+                result += "(" + lhs + " " + operator + " " + rhs + ")\n"
 
             return result
 
@@ -531,36 +537,64 @@ class Parser:
         def __init__(self, box):
             self.box = box
 
-        def to_python(self):
+        def to_python(self, indent = "    "):
             return ""           
 
     class BranchNode:
-        def __init__(self, true_case, false_case):
+        def __init__(self, box, true_case, false_case, parser):
+            self.box = box
             self.true_case = true_case
             self.false_case = false_case
+            self.parser = parser
 
-        def to_python(self):
-            return ""
+        def to_python(self, indent = "    "):
+            assert(len(self.box.input_data_flow_ports) == 1)
+            input_port = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+            condition_box = self.parser.port_box_map[input_port]
+
+            # Find temp_results from condition_box
+            condition_result_name = self.parser.temp_results[condition_box]
+
+            result = indent + "if " + condition_result_name + " == True:\n"
+            for statement in self.true_case:
+                result += statement.to_python(indent * 2)
+                
+            result += indent + "else:\n"
+            for statement in self.false_case:
+                result += statement.to_python(indent * 2)            
+            
+            return result
 
     class ForLoopNode:
         def __init__(self, loop_body):
             self.loop_body = loop_body
 
-        def to_python(self):
+        def to_python(self, indent = "    "):
             return ""                       
 
     class ReturnNode:
-        def __init__(self, box):
+        def __init__(self, box, parser):
             self.box = box
+            self.parser = parser
 
-        def to_python(self):
-            return ""                       
+        def to_python(self, indent = "    "):
+            result = ""
+
+            return_vals = []
+            
+            for port in self.box.input_data_flow_ports:
+                input_port = self.parser.find_destination_connection(port, "left")
+                input_box = self.parser.port_box_map[input_port]
+
+                # TODO: Get variable/value and append to return_vals
+
+            return result                     
 
     class FunctionDeclarationNode:
         def __init__(self, box):
             self.box = box
 
-        def to_python(self):
+        def to_python(self, indent = "    "):
             # Function signature
             result = "def "
             function_name = self.box.box_header
@@ -583,11 +617,13 @@ class Parser:
 
             result += "):\n"            
             return result
-        
 
     class FunctionCallNode:
         def __init__(self, box):
-            self.box = box            
+            self.box = box
+
+        def to_python(self, indent = "    "):
+            pass
 
     def __create_control_flow_wrapper(self, box):
         is_math_operation = (box.box_header == "")
@@ -598,7 +634,7 @@ class Parser:
         if is_math_operation:
             return Parser.OperatorNode(box, self)
         elif is_return:
-            return Parser.ReturnNode(box)
+            return Parser.ReturnNode(box, self)
         elif is_set:
             return Parser.SetNode(box)
         elif is_function and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1:
@@ -680,7 +716,7 @@ class Parser:
                     assert(len(start.output_control_flow_ports) == 0)
                     # This is the end
                     # Stop here and return
-                    result.append(Parser.ReturnNode(start))
+                    result.append(Parser.ReturnNode(start, self))
                     break
                 elif is_branch:
                     assert(len(start.output_control_flow_ports) == 2)
@@ -698,7 +734,7 @@ class Parser:
                     true_case_control_flow = self.__find_order_of_operations(true_case_start_box, False)
                     false_case_control_flow = self.__find_order_of_operations(false_case_start_box, False)
 
-                    result.append(Parser.BranchNode(true_case_control_flow, false_case_control_flow))
+                    result.append(Parser.BranchNode(start, true_case_control_flow, false_case_control_flow, self))
 
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
@@ -725,7 +761,6 @@ class Parser:
                     break
 
         return result
-        
 
     def to_python(self, indent = "    "):
         assert(len(self.flow_of_control) > 1)
