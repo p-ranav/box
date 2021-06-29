@@ -493,7 +493,7 @@ class Parser:
 
         # Arithmetic operators
         OPERATOR_TOKEN_ADD                   = "+"
-        OPERATOR_TOKEN_SUBTRACT              = "+"
+        OPERATOR_TOKEN_SUBTRACT              = "-"
         OPERATOR_TOKEN_MULTIPLY              = "*"
         OPERATOR_TOKEN_DIVIDE                = "/"
         OPERATOR_TOKEN_MODULO                = "%"
@@ -550,7 +550,19 @@ class Parser:
 
             if operator in Parser.OperatorNode.UNARY_OPERATORS:
                 assert(len(self.box.input_data_flow_ports) == 1)
-                pass
+
+                input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+                input_box = self.parser.port_box_map[input_port_0]
+
+                argument = self.parser.get_output_data_name(input_box, input_port_0)
+
+                if store_result_in_variable:
+                    operator_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
+                    self.parser.temp_results[self.box] = operator_result                
+                    result = indent + operator_result + " = "
+
+                result += "(not " + argument + ")\n"
+                
             elif operator in Parser.OperatorNode.BINARY_OPERATORS:
                 # There must be exactly 2 input data flow ports for this node
                 assert(len(self.box.input_data_flow_ports) == 2)
