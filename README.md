@@ -1,25 +1,15 @@
 # box
 
-`box` is a text-based visual programming language.
+`box` is a text-based visual programming language inspired by Unreal Engine blueprint function graphs. 
 
-![factorial](https://user-images.githubusercontent.com/8450091/123684107-af7abe80-d812-11eb-8faa-f3d736df2233.PNG)
+![image](https://user-images.githubusercontent.com/8450091/123719815-1b2b4e80-d848-11eb-91d8-e2bca1b2264f.png)
 
-
-```
- ┌─ƒ(Factorial)───┐                             ┌─[Branch]─────┐                       ┌─[Set]─┐
- │               ►┼──────┐                ┌─────┼►       True ►┼───────────────────────┼►     ►┼─────┐       ┌─[For Loop]───────────┐                       ┌───────┐
- │             n ○┼──┐   │    ┌────────┐  │  ┌──┼○      False ►┼──┐  ┌──────────┐  ┌───┼○      │     └───────┼►          Loop body ►┼───────────────────────┼►     ►┼───┐
- └────────────────┘  │   └────┼►      ►┼──┘  │  │              │  │  │  result ○┼──┘ ┌─┼○      │             │                      │   ┌───────────────────┼○  *   │   │
-             ┌────┐  └────────┼○  >=  ○┼─────┘  └──────────────┘  │  └──────────┘    │ └───────┘   ┌────┐    │                      │   │                 ┌─┼○     ○┼─┐ │  ┌─────────┐
-             │ 1 ○┼───────────┼○       │                          │       ┌────┐     │             │ 1 ○┼────┼○ start               │   │                 │ └───────┘ │ │  │ result ○┼──┐
-             └────┘           └────────┘                          │       │ 1 ○┼─────┘             └────┘    │                      │   │                 │           │ │  └─────────┘  │  ┌─[Set]─┐
-                                                                  │       └────┘                             │               index ○┼───┘   ┌─────────┐   │           │ └───────────────┼──┼►      │
-                                                                  │                                ┌────┐    │                      │       │ result ○┼───┘           │                 └──┼○      │
-                                                                  │                                │ n ○┼────┼○ end                 │       └─────────┘               └────────────────────┼○      │
-                                                                  │   ┌─[Return]─┐                 └────┘    │                      │                                                      └───────┘
-                                                           ┌────┐ └───┼►         │                           │           Completed ►┼────┐
-                                                           │ 1 ○┼─────┼○         │                           └──────────────────────┘    │     ┌─[Return]─┐
-                                                           └────┘     └──────────┘                                         ┌─────────┐   └─────┼►         │
-                                                                                                                           │ result ○┼─────────┼○         │
-                                                                                                                           └─────────┘         └──────────┘
+```console
+$ box samples/print_n_times.box -e
+Loading...0%
+Loading...20%
+Loading...40%
+Loading...60%
+Loading...80%
+Done
 ```
