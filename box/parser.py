@@ -450,7 +450,7 @@ class Parser:
                 result += self.lines[row][col]                
                 result = self.sanitize_box_contents(result)
         elif is_function_call:
-            pass                
+            result = self.temp_results[box]
         elif is_constant_or_variable:
             result = self.sanitize_box_contents(box.box_contents)
         elif is_operator:
@@ -610,22 +610,23 @@ class Parser:
         def to_python(self, indent = "    "):
             result = indent + "for "
 
-            assert(len(self.box.input_data_flow_ports) == 2)
+            assert(len(self.box.input_data_flow_ports) == 3)
 
             input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
             input_port_1 = self.parser.find_destination_connection(self.box.input_data_flow_ports[1], "left")
+            input_port_2 = self.parser.find_destination_connection(self.box.input_data_flow_ports[2], "left")            
 
             loop_arguments = []
-            for i, port in enumerate([input_port_0, input_port_1]):
+            for i, port in enumerate([input_port_0, input_port_1, input_port_2]):
                 box = self.parser.port_box_map[port]
                 loop_arguments.append(self.parser.get_output_data_name(box, port))
                 
-            start_index, end_index = loop_arguments
+            start_index, end_index, step = loop_arguments
 
             current_index = "index_" + self.box.uuid_short()
             self.parser.temp_results[self.box] = current_index
 
-            result += current_index + " in range(" + start_index + ", " + end_index + " + 1):\n"
+            result += current_index + " in range(" + start_index + ", " + end_index + ", " + step + "):\n"
 
             for statement in self.loop_body:
                 result += statement.to_python(indent + "    ")
@@ -691,14 +692,13 @@ class Parser:
         def __init__(self, box, parser):
             self.box = box
             self.parser = parser
+            self.__result_prefix = "fn"
 
         def to_python(self, indent = "    "):
             result = indent
 
             function_name = self.box.box_header
             function_name = function_name[2:len(function_name) - 1]
-            function_name = re.sub('[\W_]', '', function_name)
-            result += function_name            
  
             function_args = []
             
@@ -707,13 +707,20 @@ class Parser:
                 input_box = self.parser.port_box_map[input_port]
                 function_args.append(self.parser.get_output_data_name(input_box, input_port))
 
+            # Check if function result is used
+            if len(self.box.output_data_flow_ports) > 0:
+                fn_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
+                self.parser.temp_results[self.box] = fn_result            
+                result += fn_result + " = "
+                
+            result += function_name                
             result += "("
             for i, arg in enumerate(function_args):
                 result += arg
                 if i < len(function_args) - 1:
                     result += ", "
 
-            result += ")"
+            result += ")\n"
             return result
 
     def __create_control_flow_wrapper(self, box):
@@ -866,21 +873,21 @@ class Parser:
             result += box.to_python()
 
         # If evaluation is required, call the function
-        has_return = self.__has_return_boxes()
-        result += "\n"
-        if has_return:
-            result += "print("
-        result += self.function_name + "("
+        if eval_args is not None:
+            has_return = self.__has_return_boxes()
+            result += "\n"
+            if has_return:
+                result += "print("
+            result += self.function_name + "("
 
-        if eval_args:
             for i, arg in enumerate(eval_args):
                 result += arg
                 if i < len(eval_args) - 1:
                     result += ", "
     
-        result += ")"
-        if has_return:
             result += ")"
+            if has_return:
+                result += ")"
         
         return result
         

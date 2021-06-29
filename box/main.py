@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Box interpreter')
     parser.add_argument("path", help="Path to box file")
     parser.add_argument('-v', action="store_true", help='Toggle verbosity')
-    parser.add_argument('-e', nargs="+", help='Arguments to pass to box function')
+    parser.add_argument('-e', nargs='*', help='Arguments to pass to box function')
     args = parser.parse_args()
     main(args)
 
