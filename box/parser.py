@@ -650,7 +650,7 @@ class Parser:
             input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
             input_box = self.parser.port_box_map[input_port_0]
                 
-            condition = self.parser.get_output_data_name(box, input_port_0)
+            condition = self.parser.get_output_data_name(input_box, input_port_0)
 
             result += condition + ":\n"
 
@@ -814,7 +814,7 @@ class Parser:
                 is_math_operation = (start.box_header == "")
                 is_branch = (start.box_header == Parser.BOX_TOKEN_KEYWORD_BRANCH)
                 is_for_loop = (start.box_header == Parser.BOX_TOKEN_KEYWORD_FOR_LOOP)
-                is_while_loop = (box.box_header == Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP)                        
+                is_while_loop = (start.box_header == Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP)                        
                 is_return = (start.box_header == Parser.BOX_TOKEN_KEYWORD_RETURN)
                 is_set = (start.box_header == Parser.BOX_TOKEN_KEYWORD_SET)
 
