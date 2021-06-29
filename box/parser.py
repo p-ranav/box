@@ -429,7 +429,32 @@ class Parser:
 
     def is_operator(self, box_contents):
         text = self.sanitize_box_contents(box_contents)
-        return (text in Parser.OperatorNode.UNARY_OPERATORS or text in Parser.OperatorNode.BINARY_OPERATORS)    
+        return (text in Parser.OperatorNode.UNARY_OPERATORS or text in Parser.OperatorNode.BINARY_OPERATORS)
+
+    def is_next_box_a_while_loop(self, box):
+        result = False
+        # Check if the next box is a while loop
+        # If so, do not emit any code unless forced
+        has_next_box = (
+            len(box.output_control_flow_ports) == 1 and
+            len(box.output_data_flow_ports) == 1)
+        if has_next_box:
+            output_data_flow_port = box.output_data_flow_ports[0]
+            destination_data_flow_port = self.find_destination_connection(output_data_flow_port, "right")
+            if destination_data_flow_port in self.port_box_map:
+                destination_data_flow_box = self.port_box_map[destination_data_flow_port]
+
+                output_control_flow_port = box.output_control_flow_ports[0]
+                destination_control_flow_port = self.find_destination_connection(output_control_flow_port, "right")
+                if destination_control_flow_port in self.port_box_map:
+                    destination_control_flow_box = self.port_box_map[destination_control_flow_port]
+
+                    if destination_data_flow_port == destination_control_flow_port:
+                
+                        is_while_loop = (destination_data_flow_box.box_header == Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP)
+                        if is_while_loop:
+                            result = True
+        return result
     
     def get_output_data_name(self, box, port):
         result = ""
@@ -509,13 +534,19 @@ class Parser:
             self.parser = parser
             self.__result_prefix = "op"
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent = "    ", store_result_in_variable=True, called_by_next_box=False):
             result = ""
             
             # Check number of input ports
             box_contents = self.parser.sanitize_box_contents(self.box.box_contents)
 
             operator = box_contents
+
+            # Check if the next box is a while loop
+            # If so, do not emit any code unless forced
+            if self.parser.is_next_box_a_while_loop(self.box):
+                if not called_by_next_box:
+                    return result
 
             if operator in Parser.OperatorNode.UNARY_OPERATORS:
                 assert(len(self.box.input_data_flow_ports) == 1)
@@ -538,12 +569,12 @@ class Parser:
                 # Then set result to:
                 #   <box_1_contents> <operator> <box_2_contents>
                 #
-                # Create a variable to store the result                
-                operator_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
-
-                self.parser.temp_results[self.box] = operator_result
-                
-                result = indent + operator_result + " = "
+                # Create a variable to store the result
+                if store_result_in_variable:
+                    operator_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
+                    self.parser.temp_results[self.box] = operator_result                
+                    result = indent + operator_result + " = "
+                    
                 result += "(" + lhs + " " + operator + " " + rhs + ")\n"
 
             return result
@@ -553,7 +584,7 @@ class Parser:
             self.box = box
             self.parser = parser
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             assert(len(self.box.input_data_flow_ports) == 2)
 
             input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
@@ -585,7 +616,7 @@ class Parser:
             self.false_case = false_case
             self.parser = parser
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             assert(len(self.box.input_data_flow_ports) == 1)
             input_port = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
             condition_box = self.parser.port_box_map[input_port]
@@ -609,7 +640,7 @@ class Parser:
             self.parser = parser
             self.loop_body = loop_body
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             result = indent + "for "
 
             assert(len(self.box.input_data_flow_ports) == 3)
@@ -642,15 +673,30 @@ class Parser:
             self.parser = parser
             self.loop_body = loop_body
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             result = indent + "while "
 
             assert(len(self.box.input_data_flow_ports) == 1) # the while condition
 
             input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
             input_box = self.parser.port_box_map[input_port_0]
-                
-            condition = self.parser.get_output_data_name(input_box, input_port_0)
+
+            # Check if the previous box is either
+            # - OperatorNode
+            # - FunctionCallNode
+            # In these cases,
+            # Wrap the previous data flow box and get its emitted python code
+            # This is the WhileLoop condition
+            is_operator = self.parser.is_operator(input_box.box_contents)
+            is_function = (input_box.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))
+            is_function_call = is_function and len(input_box.input_control_flow_ports) == 1
+
+            condition = ""
+
+            if is_operator or is_function_call:
+                condition = self.parser.create_node(input_box).to_python(indent="", store_result_in_variable=False, called_by_next_box=True).strip()
+            else:
+                condition = self.parser.get_output_data_name(input_box, input_port_0)
 
             result += condition + ":\n"
 
@@ -665,7 +711,7 @@ class Parser:
             self.box = box
             self.parser = parser
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             result = indent + "return"
 
             return_vals = []
@@ -688,7 +734,7 @@ class Parser:
             self.box = box
             self.parser = parser
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    "):
             # Function signature
             result = "def "
             function_name = self.box.box_header
@@ -720,7 +766,15 @@ class Parser:
             self.parser = parser
             self.__result_prefix = "fn"
 
-        def to_python(self, indent = "    "):
+        def to_python(self, indent="    ", store_result_in_variable=True, called_by_next_box=False):
+            result = ""
+
+            # Check if the next box is a while loop
+            # If so, do not emit any code unless forced
+            if self.parser.is_next_box_a_while_loop(self.box):
+                if not called_by_next_box:
+                    return result
+                        
             result = indent
 
             function_name = self.box.box_header
@@ -734,7 +788,7 @@ class Parser:
                 function_args.append(self.parser.get_output_data_name(input_box, input_port))
 
             # Check if function result is used
-            if len(self.box.output_data_flow_ports) > 0:
+            if store_result_in_variable and len(self.box.output_data_flow_ports) > 0:
                 fn_result = self.__result_prefix + "_" + self.box.uuid_short() + "_result"
                 self.parser.temp_results[self.box] = fn_result            
                 result += fn_result + " = "
@@ -749,7 +803,7 @@ class Parser:
             result += ")\n"
             return result
 
-    def __create_control_flow_wrapper(self, box):
+    def create_node(self, box):
         is_math_operation = (box.box_header == "")
         is_return = (box.box_header == Parser.BOX_TOKEN_KEYWORD_RETURN)
         is_set = (box.box_header == Parser.BOX_TOKEN_KEYWORD_SET)
@@ -779,7 +833,7 @@ class Parser:
         # Find control flow boxes, e.g., `Branch`, `For loop` etc.
 
         # Save the input box
-        result.append(self.__create_control_flow_wrapper(start))            
+        result.append(self.create_node(start))            
 
         if global_first_box and len(start.output_control_flow_ports) != 1:
             # Possibilities:
@@ -808,7 +862,7 @@ class Parser:
             while True:
                 if len(start.output_control_flow_ports) == 0:
                     # End of control flow
-                    result.append(self.__create_control_flow_wrapper(start))
+                    result.append(self.create_node(start))
                     return result
 
                 is_math_operation = (start.box_header == "")
@@ -909,7 +963,7 @@ class Parser:
 
         return result
 
-    def to_python(self, eval_args, indent = "    "):
+    def to_python(self, eval_args, indent="    "):
         assert(len(self.flow_of_control) > 1)
         first = self.flow_of_control[0]
         assert(type(first) == type(Parser.FunctionDeclarationNode(None, self)))
