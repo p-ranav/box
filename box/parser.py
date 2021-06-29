@@ -20,6 +20,7 @@ class Parser:
     BOX_TOKEN_RIGHT_PAREN        = ')'
     BOX_TOKEN_KEYWORD_BRANCH     = '[Branch]'    
     BOX_TOKEN_KEYWORD_FOR_LOOP   = '[For Loop]'
+    BOX_TOKEN_KEYWORD_WHILE_LOOP = '[While Loop]'    
     BOX_TOKEN_KEYWORD_RETURN     = '[Return]'    
     BOX_TOKEN_KEYWORD_SET        = '[Set]'
     BOX_TOKEN_DATA_FLOW_PORT     = '○'
@@ -105,6 +106,7 @@ class Parser:
                         result = True
         elif header in [Parser.BOX_TOKEN_KEYWORD_BRANCH,
                         Parser.BOX_TOKEN_KEYWORD_FOR_LOOP,
+                        Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP,
                         Parser.BOX_TOKEN_KEYWORD_RETURN,
                         Parser.BOX_TOKEN_KEYWORD_SET]:
             # Valid keyword
@@ -634,6 +636,30 @@ class Parser:
             
             return result
 
+    class WhileLoopNode:
+        def __init__(self, box, loop_body, parser):
+            self.box = box
+            self.parser = parser
+            self.loop_body = loop_body
+
+        def to_python(self, indent = "    "):
+            result = indent + "while "
+
+            assert(len(self.box.input_data_flow_ports) == 1) # the while condition
+
+            input_port_0 = self.parser.find_destination_connection(self.box.input_data_flow_ports[0], "left")
+            input_box = self.parser.port_box_map[input_port_0]
+                
+            condition = self.parser.get_output_data_name(box, input_port_0)
+
+            result += condition + ":\n"
+
+            for statement in self.loop_body:
+                result += statement.to_python(indent + "    ")
+            result += "\n"
+            
+            return result        
+
     class ReturnNode:
         def __init__(self, box, parser):
             self.box = box
@@ -788,6 +814,7 @@ class Parser:
                 is_math_operation = (start.box_header == "")
                 is_branch = (start.box_header == Parser.BOX_TOKEN_KEYWORD_BRANCH)
                 is_for_loop = (start.box_header == Parser.BOX_TOKEN_KEYWORD_FOR_LOOP)
+                is_while_loop = (box.box_header == Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP)                        
                 is_return = (start.box_header == Parser.BOX_TOKEN_KEYWORD_RETURN)
                 is_set = (start.box_header == Parser.BOX_TOKEN_KEYWORD_SET)
 
@@ -857,6 +884,28 @@ class Parser:
 
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
+                elif is_while_loop:
+                    assert(len(start.output_control_flow_ports) == 2)
+                    # Two output control flow ports here
+                    # The `Loop body` case, and the `Completed` case
+                    loop_body_output_port = start.output_control_flow_ports[0]
+                    completed_output_port = start.output_control_flow_ports[1]
+
+                    loop_body_case_start_port = self.find_destination_connection(loop_body_output_port)
+                    completed_case_start_port = self.find_destination_connection(completed_output_port)
+
+                    loop_body_case_start_box = self.port_box_map[loop_body_case_start_port]
+                    completed_case_start_box = self.port_box_map[completed_case_start_port]
+
+                    loop_body_case_control_flow = self.__find_order_of_operations(loop_body_case_start_box, False)
+                    completed_case_control_flow = self.__find_order_of_operations(completed_case_start_box, False)
+
+                    result.append(Parser.WhileLoopNode(start, loop_body_case_control_flow, self))
+                    result.extend(completed_case_control_flow)
+
+                    # Branch Control flow should break this loop since we cannot update `start`
+                    break
+                
 
         return result
 
