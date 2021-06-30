@@ -213,15 +213,34 @@ class Generator:
                 result += self.lines[row][col]
                 result = self._sanitize_box_contents(result)
         elif is_function_call:
-            result = self.temp_results[box]
+            if box in self.temp_results:
+                result = self.temp_results[box]
+            else:
+                # Function result is not stored as a temp result
+                # Just embed the function call expression in place
+                node = self._create_node(box)
+                result = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()                
         elif is_constant_or_variable:
             result = self._sanitize_box_contents(box.box_contents)
         elif is_operator:
-            result = self.temp_results[box]
+            if box in self.temp_results:
+                result = self.temp_results[box]
+            else:
+                # No temp result, just embed the expression in place
+                node = self._create_node(box)
+                result = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()
         elif is_for_loop:
-            result = self.temp_results[box]
+            if box in self.temp_results:
+                result = self.temp_results[box]
+            else:
+                # TODO: report error
+                pass
         elif is_set:
-            result = self.temp_result[box]
+            if box in self.temp_results:
+                result = self.temp_result[box]
+            else:
+                # TODO: report error
+                pass                
 
         return result
 
