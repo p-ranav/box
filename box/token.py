@@ -17,6 +17,7 @@ class Token:
     RIGHT_PAREN = ")"
     KEYWORD_BRANCH = "[Branch]"
     KEYWORD_FOR_LOOP = "[For Loop]"
+    KEYWORD_FOR_EACH = "[For Each]"
     KEYWORD_WHILE_LOOP = "[While Loop]"
     KEYWORD_RETURN = "[Return]"
     KEYWORD_SET = "[Set]"

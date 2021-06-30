@@ -1,0 +1,12 @@
+
+ ┌─ƒ(Print Iterable)───┐    ┌─[For Each]─────┐      ┌─ƒ(print)──┐
+ │                    ►┼────┼►    Loop Body ►┼──────┼►          │
+ │           iterable ○┼────┼○            v ○┼──────┼○          │                             
+ └─────────────────────┘    └────────────────┘      └───────────┘ 
+
+$ python3 -m box.main samples/print_list.box -e "[1, 2, 3, 4, 5]"
+ 1
+ 2
+ 3
+ 4
+ 5

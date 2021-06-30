@@ -4,6 +4,7 @@ from box.operator_node import OperatorNode
 from box.set_node import SetNode
 from box.branch_node import BranchNode
 from box.for_loop_node import ForLoopNode
+from box.for_each_node import ForEachNode
 from box.while_loop_node import WhileLoopNode
 from box.return_node import ReturnNode
 from box.function_declaration_node import FunctionDeclarationNode
@@ -169,6 +170,7 @@ class Generator:
         )
         is_constant_or_variable = (not is_operator) and (box.box_header == "")
         is_for_loop = box.box_header == Token.KEYWORD_FOR_LOOP
+        is_for_each = box.box_header == Token.KEYWORD_FOR_EACH
         is_set = box.box_header == Token.KEYWORD_SET
 
         if is_function:
@@ -202,7 +204,7 @@ class Generator:
                 result = node.to_python(
                     "", store_result_in_variable=False, called_by_next_box=True
                 ).strip()
-        elif is_for_loop:
+        elif is_for_loop or is_for_each:
             if box in self.temp_results:
                 result = self.temp_results[box]
             else:
@@ -301,6 +303,7 @@ class Generator:
                 )
                 is_branch = start.box_header == Token.KEYWORD_BRANCH
                 is_for_loop = start.box_header == Token.KEYWORD_FOR_LOOP
+                is_for_each = start.box_header == Token.KEYWORD_FOR_EACH
                 is_while_loop = start.box_header == Token.KEYWORD_WHILE_LOOP
                 is_return = start.box_header == Token.KEYWORD_RETURN
                 is_set = start.box_header == Token.KEYWORD_SET
@@ -367,72 +370,104 @@ class Generator:
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
                 elif is_for_loop:
-                    assert len(start.output_control_flow_ports) == 2
+                    assert len(start.output_control_flow_ports) >= 1
+                    assert len(start.output_control_flow_ports) <= 2
                     # Two output control flow ports here
                     # The `Loop body` case, and the `Completed` case
                     loop_body_output_port = start.output_control_flow_ports[0]
-                    completed_output_port = start.output_control_flow_ports[1]
-
                     loop_body_case_start_port = self._find_destination_connection(
                         loop_body_output_port
                     )
-                    completed_case_start_port = self._find_destination_connection(
-                        completed_output_port
-                    )
-
                     loop_body_case_start_box = self.port_box_map[
                         loop_body_case_start_port
                     ]
-                    completed_case_start_box = self.port_box_map[
-                        completed_case_start_port
-                    ]
-
                     loop_body_case_control_flow = self._find_order_of_operations(
                         loop_body_case_start_box, False
                     )
-                    completed_case_control_flow = self._find_order_of_operations(
-                        completed_case_start_box, False
-                    )
-
                     result.append(ForLoopNode(start, loop_body_case_control_flow, self))
-                    result.extend(completed_case_control_flow)
 
-                    # Branch Control flow should break this loop since we cannot update `start`
+                    if len(start.output_control_flow_ports) > 1:
+                        # Completed case provided
+                        completed_output_port = start.output_control_flow_ports[1]
+                        completed_case_start_port = self._find_destination_connection(
+                            completed_output_port
+                        )
+                        completed_case_start_box = self.port_box_map[
+                            completed_case_start_port
+                        ]
+                        completed_case_control_flow = self._find_order_of_operations(
+                            completed_case_start_box, False
+                        )
+                        result.extend(completed_case_control_flow)
+
                     break
                 elif is_while_loop:
-                    assert len(start.output_control_flow_ports) == 2
+                    assert len(start.output_control_flow_ports) >= 1
+                    assert len(start.output_control_flow_ports) <= 2
                     # Two output control flow ports here
                     # The `Loop body` case, and the `Completed` case
                     loop_body_output_port = start.output_control_flow_ports[0]
-                    completed_output_port = start.output_control_flow_ports[1]
-
                     loop_body_case_start_port = self._find_destination_connection(
                         loop_body_output_port
                     )
-                    completed_case_start_port = self._find_destination_connection(
-                        completed_output_port
-                    )
-
                     loop_body_case_start_box = self.port_box_map[
                         loop_body_case_start_port
                     ]
-                    completed_case_start_box = self.port_box_map[
-                        completed_case_start_port
-                    ]
-
                     loop_body_case_control_flow = self._find_order_of_operations(
                         loop_body_case_start_box, False
                     )
-                    completed_case_control_flow = self._find_order_of_operations(
-                        completed_case_start_box, False
-                    )
-
                     result.append(
                         WhileLoopNode(start, loop_body_case_control_flow, self)
                     )
-                    result.extend(completed_case_control_flow)
 
-                    # Branch Control flow should break this loop since we cannot update `start`
+                    if len(start.output_control_flow_ports) > 1:
+                        # Completed case provided
+                        completed_output_port = start.output_control_flow_ports[1]
+                        completed_case_start_port = self._find_destination_connection(
+                            completed_output_port
+                        )
+                        completed_case_start_box = self.port_box_map[
+                            completed_case_start_port
+                        ]
+                        completed_case_control_flow = self._find_order_of_operations(
+                            completed_case_start_box, False
+                        )
+                        result.extend(completed_case_control_flow)
+
+                    break
+
+                elif is_for_each:
+                    assert len(start.input_control_flow_ports) == 1
+                    assert len(start.output_control_flow_ports) >= 1
+                    assert len(start.output_control_flow_ports) <= 2
+                    # Two output control flow ports here
+                    # The `Loop body` case, and the `Completed` case
+                    loop_body_output_port = start.output_control_flow_ports[0]
+                    loop_body_case_start_port = self._find_destination_connection(
+                        loop_body_output_port
+                    )
+                    loop_body_case_start_box = self.port_box_map[
+                        loop_body_case_start_port
+                    ]
+                    loop_body_case_control_flow = self._find_order_of_operations(
+                        loop_body_case_start_box, False
+                    )
+                    result.append(ForEachNode(start, loop_body_case_control_flow, self))
+
+                    if len(start.output_control_flow_ports) > 1:
+                        # Completed case provided
+                        completed_output_port = start.output_control_flow_ports[1]
+                        completed_case_start_port = self._find_destination_connection(
+                            completed_output_port
+                        )
+                        completed_case_start_box = self.port_box_map[
+                            completed_case_start_port
+                        ]
+                        completed_case_control_flow = self._find_order_of_operations(
+                            completed_case_start_box, False
+                        )
+                        result.extend(completed_case_control_flow)
+
                     break
 
                 elif is_function_call:

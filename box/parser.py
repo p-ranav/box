@@ -55,6 +55,7 @@ class Parser:
         elif header in [
             Token.KEYWORD_BRANCH,
             Token.KEYWORD_FOR_LOOP,
+            Token.KEYWORD_FOR_EACH,
             Token.KEYWORD_WHILE_LOOP,
             Token.KEYWORD_RETURN,
             Token.KEYWORD_SET,

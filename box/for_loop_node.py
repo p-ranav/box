@@ -3,6 +3,7 @@ class ForLoopNode:
         self.box = box
         self.generator = generator
         self.loop_body = loop_body
+        self._result_prefix = "index"
 
     def to_python(self, indent="    "):
         result = indent + "for "
@@ -26,7 +27,7 @@ class ForLoopNode:
 
         start_index, end_index, step = loop_arguments
 
-        current_index = "index_" + self.box.uuid_short()
+        current_index = self._result_prefix + "_" + self.box.uuid_short()
         self.generator.temp_results[self.box] = current_index
 
         result += (
