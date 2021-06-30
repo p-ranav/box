@@ -46,6 +46,5 @@ class WhileLoopNode:
 
         for statement in self.loop_body:
             result += statement.to_python(indent + "    ")
-        result += "\n"
 
         return result

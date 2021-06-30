@@ -7,14 +7,6 @@ class FunctionCallNode:
     def to_python(
         self, indent="    ", store_result_in_variable=True, called_by_next_box=False
     ):
-        result = ""
-
-        # Check if the next box is a while loop
-        # If so, do not emit any code unless forced
-        if self.generator._is_next_box_a_while_loop(self.box):
-            if not called_by_next_box:
-                return result
-
         result = indent
 
         function_name = self.box.box_header

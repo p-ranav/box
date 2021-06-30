@@ -57,12 +57,6 @@ class OperatorNode:
 
         operator = box_contents
 
-        # Check if the next box is a while loop
-        # If so, do not emit any code unless forced
-        if self.generator._is_next_box_a_while_loop(self.box):
-            if not called_by_next_box:
-                return result
-
         if operator in OperatorNode.UNARY_OPERATORS:
             assert len(self.box.input_data_flow_ports) == 1
 

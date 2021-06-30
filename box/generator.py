@@ -151,43 +151,6 @@ class Generator:
             or text in OperatorNode.BINARY_OPERATORS
         )
 
-    def _is_next_box_a_while_loop(self, box):
-        result = False
-        # Check if the next box is a while loop
-        # If so, do not emit any code unless forced
-        has_next_box = (
-            len(box.output_control_flow_ports) == 1
-            and len(box.output_data_flow_ports) == 1
-        )
-        if has_next_box:
-            output_data_flow_port = box.output_data_flow_ports[0]
-            destination_data_flow_port = self._find_destination_connection(
-                output_data_flow_port, "right"
-            )
-            if destination_data_flow_port in self.port_box_map:
-                destination_data_flow_box = self.port_box_map[
-                    destination_data_flow_port
-                ]
-
-                output_control_flow_port = box.output_control_flow_ports[0]
-                destination_control_flow_port = self._find_destination_connection(
-                    output_control_flow_port, "right"
-                )
-                if destination_control_flow_port in self.port_box_map:
-                    destination_control_flow_box = self.port_box_map[
-                        destination_control_flow_port
-                    ]
-
-                    if destination_data_flow_port == destination_control_flow_port:
-
-                        is_while_loop = (
-                            destination_data_flow_box.box_header
-                            == Token.KEYWORD_WHILE_LOOP
-                        )
-                        if is_while_loop:
-                            result = True
-        return result
-
     def _get_output_data_name(self, box, port):
         result = ""
 
