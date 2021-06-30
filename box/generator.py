@@ -150,6 +150,7 @@ class Generator:
             text in OperatorNode.UNARY_OPERATORS
             or text in OperatorNode.BINARY_OPERATORS
             or text in OperatorNode.INCREMENT_DECREMENT_OPERATORS
+            or text in OperatorNode.ASSIGNMENT_OPERATORS
         )
 
     def _get_output_data_name(self, box, port):

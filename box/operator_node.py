@@ -1,52 +1,73 @@
 class OperatorNode:
 
     # Arithmetic operators
-    OPERATOR_TOKEN_ADD = "+"
-    OPERATOR_TOKEN_SUBTRACT = "-"
-    OPERATOR_TOKEN_MULTIPLY = "*"
-    OPERATOR_TOKEN_DIVIDE = "/"
-    OPERATOR_TOKEN_MODULO = "%"
-    OPERATOR_TOKEN_EXPONENTIATION = "**"
-    OPERATOR_TOKEN_FLOOR_DIVISION = "//"
+    ADD = "+"
+    SUBTRACT = "-"
+    MULTIPLY = "*"
+    DIVIDE = "/"
+    MODULO = "%"
+    EXPONENTIATION = "**"
+    FLOOR_DIVISION = "//"
 
     # Logical operators
-    OPERATOR_TOKEN_AND = "&&"
-    OPERATOR_TOKEN_OR = "||"
-    OPERATOR_TOKEN_NOT = "!"
+    AND = "&&"
+    OR = "||"
+    NOT = "!"
 
     # Comparison operators
-    OPERATOR_TOKEN_GREATER_THAN = ">"
-    OPERATOR_TOKEN_GREATER_THAN_OR_EQUAL = ">="
-    OPERATOR_TOKEN_LESS_THAN = "<"
-    OPERATOR_TOKEN_LESS_THAN_OR_EQUAL = "<="
-    OPERATOR_TOKEN_EQUAL = "=="
-    OPERATOR_TOKEN_NOT_EQUAL = "!="
+    GREATER_THAN = ">"
+    GREATER_THAN_OR_EQUAL = ">="
+    LESS_THAN = "<"
+    LESS_THAN_OR_EQUAL = "<="
+    EQUAL = "=="
+    NOT_EQUAL = "!="
 
     # Increment/decrement operators
-    OPERATOR_TOKEN_INCREMENT = "++"
-    OPERATOR_TOKEN_DECREMENT = "--"
+    INCREMENT = "++"
+    DECREMENT = "--"
 
-    UNARY_OPERATORS = [OPERATOR_TOKEN_NOT]
+    # Assignment operators
+    ASSIGN                   = "="
+    ADD_AND_ASSIGN           = "+="
+    SUBTRACT_AND_ASSIGN      = "-="
+    MULTIPLY_AND_ASSIGN      = "*="
+    DIVIDE_AND_ASSIGN        = "/="
+    MODULUS_AND_ASSIGN       = "%="
+    FLOOR_DIVIDE_AND_ASSIGN  = "//="
+    EXPONENT_AND_ASSIGN      = "**="                
+
+    UNARY_OPERATORS = [NOT]
 
     BINARY_OPERATORS = [
-        OPERATOR_TOKEN_ADD,
-        OPERATOR_TOKEN_SUBTRACT,
-        OPERATOR_TOKEN_MULTIPLY,
-        OPERATOR_TOKEN_DIVIDE,
-        OPERATOR_TOKEN_MODULO,
-        OPERATOR_TOKEN_EXPONENTIATION,
-        OPERATOR_TOKEN_FLOOR_DIVISION,
-        OPERATOR_TOKEN_AND,
-        OPERATOR_TOKEN_OR,
-        OPERATOR_TOKEN_GREATER_THAN,
-        OPERATOR_TOKEN_GREATER_THAN_OR_EQUAL,
-        OPERATOR_TOKEN_LESS_THAN,
-        OPERATOR_TOKEN_LESS_THAN_OR_EQUAL,
-        OPERATOR_TOKEN_EQUAL,
-        OPERATOR_TOKEN_NOT_EQUAL,
+        ADD,
+        SUBTRACT,
+        MULTIPLY,
+        DIVIDE,
+        MODULO,
+        EXPONENTIATION,
+        FLOOR_DIVISION,
+        AND,
+        OR,
+        GREATER_THAN,
+        GREATER_THAN_OR_EQUAL,
+        LESS_THAN,
+        LESS_THAN_OR_EQUAL,
+        EQUAL,
+        NOT_EQUAL,
     ]
 
-    INCREMENT_DECREMENT_OPERATORS = [OPERATOR_TOKEN_INCREMENT, OPERATOR_TOKEN_DECREMENT]
+    INCREMENT_DECREMENT_OPERATORS = [INCREMENT, DECREMENT]
+
+    ASSIGNMENT_OPERATORS = [
+        ASSIGN,
+        ADD_AND_ASSIGN,
+        SUBTRACT_AND_ASSIGN,
+        MULTIPLY_AND_ASSIGN,
+        DIVIDE_AND_ASSIGN,
+        MODULUS_AND_ASSIGN,
+        FLOOR_DIVIDE_AND_ASSIGN,
+        EXPONENT_AND_ASSIGN
+    ]
 
     def __init__(self, box, generator):
         self.box = box
@@ -120,6 +141,7 @@ class OperatorNode:
 
             # There must be exactly 1 input data flow port for this node
             assert len(self.box.input_data_flow_ports) == 1
+            assert len(self.box.output_data_flow_ports) == 0
 
             input_port_0 = self.generator._find_destination_connection(
                 self.box.input_data_flow_ports[0], "left"
@@ -129,9 +151,9 @@ class OperatorNode:
             input_arg = self.generator._get_output_data_name(input_box, input_port_0)
 
             operator_string = ""
-            if operator == OperatorNode.OPERATOR_TOKEN_INCREMENT:
+            if operator == OperatorNode.INCREMENT:
                 operator_string = "+"
-            elif operator == OperatorNode.OPERATOR_TOKEN_DECREMENT:
+            elif operator == OperatorNode.DECREMENT:
                 operator_string = "-"
 
             # Find the two input boxes and parse their contents
@@ -140,9 +162,39 @@ class OperatorNode:
             #
             # Create a variable to store the result
             if store_result_in_variable:
-                self.generator.temp_results[self.box] = operator_result
                 result = indent + input_arg + " = "
 
             result += "(" + input_arg + " " + operator_string + " 1)\n"
 
+        elif operator in OperatorNode.ASSIGNMENT_OPERATORS:
+            # There must be exactly 2 input data flow ports for this node
+            assert len(self.box.input_data_flow_ports) == 2
+            assert len(self.box.output_data_flow_ports) == 0
+
+            input_port_0 = self.generator._find_destination_connection(
+                self.box.input_data_flow_ports[0], "left"
+            )
+            input_port_1 = self.generator._find_destination_connection(
+                self.box.input_data_flow_ports[1], "left"
+            )
+
+            operator_arguments = []
+            for i, port in enumerate([input_port_0, input_port_1]):
+                box = self.generator.port_box_map[port]
+                operator_arguments.append(
+                    self.generator._get_output_data_name(box, port)
+                )
+
+            lhs, rhs = operator_arguments
+
+            # Find the two input boxes and parse their contents
+            # Then set result to:
+            #   <box_1_contents> <operator> <box_2_contents>
+            #
+            # Create a variable to store the result
+            if store_result_in_variable:
+                result = indent + lhs + " " + operator + " "
+
+            result += rhs + "\n"
+            
         return result
