@@ -22,6 +22,10 @@ class OperatorNode:
     OPERATOR_TOKEN_EQUAL = "=="
     OPERATOR_TOKEN_NOT_EQUAL = "!="
 
+    # Increment/decrement operators
+    OPERATOR_TOKEN_INCREMENT = "++"
+    OPERATOR_TOKEN_DECREMENT = "--"
+
     UNARY_OPERATORS = [OPERATOR_TOKEN_NOT]
 
     BINARY_OPERATORS = [
@@ -40,6 +44,11 @@ class OperatorNode:
         OPERATOR_TOKEN_LESS_THAN_OR_EQUAL,
         OPERATOR_TOKEN_EQUAL,
         OPERATOR_TOKEN_NOT_EQUAL,
+    ]
+
+    INCREMENT_DECREMENT_OPERATORS = [
+        OPERATOR_TOKEN_INCREMENT,
+        OPERATOR_TOKEN_DECREMENT
     ]
 
     def __init__(self, box, generator):
@@ -110,4 +119,33 @@ class OperatorNode:
 
             result += "(" + lhs + " " + operator + " " + rhs + ")\n"
 
+        elif operator in OperatorNode.INCREMENT_DECREMENT_OPERATORS:
+
+            # There must be exactly 1 input data flow port for this node
+            assert len(self.box.input_data_flow_ports) == 1
+
+            input_port_0 = self.generator._find_destination_connection(
+                self.box.input_data_flow_ports[0], "left"
+            )
+            input_box = self.generator.port_box_map[input_port_0]
+
+            input_arg = self.generator._get_output_data_name(input_box, input_port_0)
+
+            operator_string = ""
+            if operator == OperatorNode.OPERATOR_TOKEN_INCREMENT:
+                operator_string = "+"
+            elif operator == OperatorNode.OPERATOR_TOKEN_DECREMENT:
+                operator_string = "-"
+
+            # Find the two input boxes and parse their contents
+            # Then set result to:
+            #   <box_1_content> = <box_1_content> <operator> 1
+            #
+            # Create a variable to store the result
+            if store_result_in_variable:
+                self.generator.temp_results[self.box] = operator_result
+                result = indent + input_arg + " = "
+
+            result += "(" + input_arg + " " + operator_string + " 1)\n"
+            
         return result
