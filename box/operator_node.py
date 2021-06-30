@@ -46,10 +46,7 @@ class OperatorNode:
         OPERATOR_TOKEN_NOT_EQUAL,
     ]
 
-    INCREMENT_DECREMENT_OPERATORS = [
-        OPERATOR_TOKEN_INCREMENT,
-        OPERATOR_TOKEN_DECREMENT
-    ]
+    INCREMENT_DECREMENT_OPERATORS = [OPERATOR_TOKEN_INCREMENT, OPERATOR_TOKEN_DECREMENT]
 
     def __init__(self, box, generator):
         self.box = box
@@ -147,5 +144,5 @@ class OperatorNode:
                 result = indent + input_arg + " = "
 
             result += "(" + input_arg + " " + operator_string + " 1)\n"
-            
+
         return result
