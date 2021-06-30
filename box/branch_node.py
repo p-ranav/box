@@ -20,7 +20,9 @@ class BranchNode:
             # The previous box is embedded as the branch condition
             # Generate the code for this box and embed it in place
             node = self.generator._create_node(condition_box)
-            condition_result_name = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()
+            condition_result_name = node.to_python(
+                "", store_result_in_variable=False, called_by_next_box=True
+            ).strip()
 
         result = indent + "if " + condition_result_name + ":\n"
         for statement in self.true_case:
