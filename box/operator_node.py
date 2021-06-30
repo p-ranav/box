@@ -14,6 +14,14 @@ class OperatorNode:
     OR = "||"
     NOT = "!"
 
+    # Bitwise operators
+    BITWISE_AND = "&"
+    BITWISE_OR = "|"
+    BITWISE_NOT = "~"
+    BITWISE_XOR = "^"
+    BITWISE_RIGHT_SHIFT = ">>"
+    BITWISE_LEFT_SHIFT = "<<"
+
     # Comparison operators
     GREATER_THAN = ">"
     GREATER_THAN_OR_EQUAL = ">="
@@ -27,14 +35,20 @@ class OperatorNode:
     DECREMENT = "--"
 
     # Assignment operators
-    ASSIGN                   = "="
-    ADD_AND_ASSIGN           = "+="
-    SUBTRACT_AND_ASSIGN      = "-="
-    MULTIPLY_AND_ASSIGN      = "*="
-    DIVIDE_AND_ASSIGN        = "/="
-    MODULUS_AND_ASSIGN       = "%="
-    FLOOR_DIVIDE_AND_ASSIGN  = "//="
-    EXPONENT_AND_ASSIGN      = "**="                
+    ASSIGN = "="
+    ADD_AND_ASSIGN = "+="
+    SUBTRACT_AND_ASSIGN = "-="
+    MULTIPLY_AND_ASSIGN = "*="
+    DIVIDE_AND_ASSIGN = "/="
+    MODULUS_AND_ASSIGN = "%="
+    FLOOR_DIVIDE_AND_ASSIGN = "//="
+    EXPONENT_AND_ASSIGN = "**="
+    BITWISE_AND_AND_ASSIGN = "&="
+    BITWISE_OR_AND_ASSIGN = "|="
+    BITWISE_NOT_AND_ASSIGN = "~="
+    BITWISE_XOR_AND_ASSIGN = "^="
+    BITWISE_RIGHT_SHIFT_AND_ASSIGN = ">>="
+    BITWISE_LEFT_SHIFT_AND_ASSIGN = "<<="
 
     UNARY_OPERATORS = [NOT]
 
@@ -54,6 +68,12 @@ class OperatorNode:
         LESS_THAN_OR_EQUAL,
         EQUAL,
         NOT_EQUAL,
+        BITWISE_AND,
+        BITWISE_OR,
+        BITWISE_NOT,
+        BITWISE_XOR,
+        BITWISE_RIGHT_SHIFT,
+        BITWISE_LEFT_SHIFT,
     ]
 
     INCREMENT_DECREMENT_OPERATORS = [INCREMENT, DECREMENT]
@@ -66,7 +86,13 @@ class OperatorNode:
         DIVIDE_AND_ASSIGN,
         MODULUS_AND_ASSIGN,
         FLOOR_DIVIDE_AND_ASSIGN,
-        EXPONENT_AND_ASSIGN
+        EXPONENT_AND_ASSIGN,
+        BITWISE_AND_AND_ASSIGN,
+        BITWISE_OR_AND_ASSIGN,
+        BITWISE_NOT_AND_ASSIGN,
+        BITWISE_XOR_AND_ASSIGN,
+        BITWISE_RIGHT_SHIFT_AND_ASSIGN,
+        BITWISE_LEFT_SHIFT_AND_ASSIGN,
     ]
 
     def __init__(self, box, generator):
@@ -196,5 +222,5 @@ class OperatorNode:
                 result = indent + lhs + " " + operator + " "
 
             result += rhs + "\n"
-            
+
         return result
