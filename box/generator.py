@@ -192,17 +192,13 @@ class Generator:
         result = ""
 
         is_operator = self._is_operator(box.box_contents)
-        is_function = box.box_header.startswith(Token.FUNCTION_START)
-        is_function_call = is_function and len(box.input_control_flow_ports) == 1
+        is_function = box.box_header.startswith(Token.FUNCTION_START) and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1
+        is_function_call = box.box_header.startswith(Token.FUNCTION_START) and len(box.input_control_flow_ports) <= 1 and len(box.output_control_flow_ports) <= 1
         is_constant_or_variable = (not is_operator) and (box.box_header == "")
         is_for_loop = box.box_header == Token.KEYWORD_FOR_LOOP
         is_set = box.box_header == Token.KEYWORD_SET
 
-        if (
-            is_function
-            and len(box.input_control_flow_ports) == 0
-            and len(box.output_control_flow_ports) == 1
-        ):
+        if is_function:
             # This is a function declaration box
             # This box could have multiple parameters
             col_start = box.top_left[1] + 1
@@ -219,7 +215,7 @@ class Generator:
                 # Function result is not stored as a temp result
                 # Just embed the function call expression in place
                 node = self._create_node(box)
-                result = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()                
+                result = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()
         elif is_constant_or_variable:
             result = self._sanitize_box_contents(box.box_contents)
         elif is_operator:
@@ -248,7 +244,8 @@ class Generator:
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
         is_set = box.box_header == Token.KEYWORD_SET
-        is_function = box.box_header.startswith(Token.FUNCTION_START)
+        is_function = box.box_header.startswith(Token.FUNCTION_START) and len(box.input_control_flow_ports) == 0 and len(box.output_control_flow_ports) == 1
+        is_function_call = box.box_header.startswith(Token.FUNCTION_START) and len(box.input_control_flow_ports) <= 1 and len(box.output_control_flow_ports) <= 1
 
         if is_math_operation:
             return OperatorNode(box, self)
@@ -256,13 +253,9 @@ class Generator:
             return ReturnNode(box, self)
         elif is_set:
             return SetNode(box, self)
-        elif (
-            is_function
-            and len(box.input_control_flow_ports) == 0
-            and len(box.output_control_flow_ports) == 1
-        ):
+        elif is_function:
             return FunctionDeclarationNode(box, self)
-        elif is_function and len(box.input_control_flow_ports) == 1:
+        elif is_function_call:
             return FunctionCallNode(box, self)
         else:
             # TODO: Throw an error
@@ -311,10 +304,8 @@ class Generator:
                     return result
 
                 is_math_operation = start.box_header == ""
-                is_function = start.box_header.startswith(Token.FUNCTION_START)
-                is_function_call = (
-                    is_function and len(start.input_control_flow_ports) == 1
-                )
+                is_function = start.box_header.startswith(Token.FUNCTION_START) and len(start.input_control_flow_ports) == 0 and len(start.output_control_flow_ports) == 1
+                is_function_call = start.box_header.startswith(Token.FUNCTION_START) and len(start.input_control_flow_ports) <= 1 and len(start.output_control_flow_ports) <= 1
                 is_branch = start.box_header == Token.KEYWORD_BRANCH
                 is_for_loop = start.box_header == Token.KEYWORD_FOR_LOOP
                 is_while_loop = start.box_header == Token.KEYWORD_WHILE_LOOP
