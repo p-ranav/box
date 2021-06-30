@@ -9,6 +9,8 @@ from box.while_loop_node import WhileLoopNode
 from box.return_node import ReturnNode
 from box.function_declaration_node import FunctionDeclarationNode
 from box.function_call_node import FunctionCallNode
+from box.break_node import BreakNode
+from box.continue_node import ContinueNode
 
 
 class Generator:
@@ -222,6 +224,8 @@ class Generator:
     def _create_node(self, box):
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
+        is_break = box.box_header == Token.KEYWORD_BREAK
+        is_continue = box.box_header == Token.KEYWORD_CONTINUE
         is_set = box.box_header == Token.KEYWORD_SET
         is_function = (
             box.box_header.startswith(Token.FUNCTION_START)
@@ -238,6 +242,10 @@ class Generator:
             return OperatorNode(box, self)
         elif is_return:
             return ReturnNode(box, self)
+        elif is_break:
+            return BreakNode(box, self)
+        elif is_continue:
+            return ContinueNode(box, self)
         elif is_set:
             return SetNode(box, self)
         elif is_function:
@@ -306,6 +314,8 @@ class Generator:
                 is_for_each = start.box_header == Token.KEYWORD_FOR_EACH
                 is_while_loop = start.box_header == Token.KEYWORD_WHILE_LOOP
                 is_return = start.box_header == Token.KEYWORD_RETURN
+                is_break = start.box_header == Token.KEYWORD_BREAK
+                is_continue = start.box_header == Token.KEYWORD_CONTINUE
                 is_set = start.box_header == Token.KEYWORD_SET
 
                 if is_math_operation:
@@ -336,6 +346,20 @@ class Generator:
                     # This is the end
                     # Stop here and return
                     result.append(ReturnNode(start, self))
+                    break
+                elif is_break:
+                    assert len(start.output_control_flow_ports) == 0
+                    # This is a break statement
+                    # Break here since there won't be any other statements
+                    # in this control flow
+                    result.append(BreakNode(start, self))
+                    break
+                elif is_continue:
+                    assert len(start.output_control_flow_ports) == 0
+                    # This is a continue statement
+                    # Break here since there won't be any other statements
+                    # in this control flow
+                    result.append(ContinueNode(start, self))
                     break
                 elif is_branch:
                     assert len(start.output_control_flow_ports) == 2

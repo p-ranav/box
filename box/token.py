@@ -20,6 +20,8 @@ class Token:
     KEYWORD_FOR_EACH = "[For Each]"
     KEYWORD_WHILE_LOOP = "[While Loop]"
     KEYWORD_RETURN = "[Return]"
+    KEYWORD_BREAK = "[Break]"
+    KEYWORD_CONTINUE = "[Continue]"
     KEYWORD_SET = "[Set]"
     DATA_FLOW_PORT = "○"
     CONTROL_FLOW_PORT = "►"

@@ -58,6 +58,8 @@ class Parser:
             Token.KEYWORD_FOR_EACH,
             Token.KEYWORD_WHILE_LOOP,
             Token.KEYWORD_RETURN,
+            Token.KEYWORD_BREAK,
+            Token.KEYWORD_CONTINUE,
             Token.KEYWORD_SET,
         ]:
             # Valid keyword
