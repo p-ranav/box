@@ -878,6 +878,8 @@ class Parser:
                     return result
 
                 is_math_operation = (start.box_header == "")
+                is_function = (start.box_header.startswith(Parser.BOX_TOKEN_FUNCTION_START))                
+                is_function_call = is_function and len(start.input_control_flow_ports) == 1
                 is_branch = (start.box_header == Parser.BOX_TOKEN_KEYWORD_BRANCH)
                 is_for_loop = (start.box_header == Parser.BOX_TOKEN_KEYWORD_FOR_LOOP)
                 is_while_loop = (start.box_header == Parser.BOX_TOKEN_KEYWORD_WHILE_LOOP)                        
@@ -898,11 +900,15 @@ class Parser:
                     assert(len(start.output_control_flow_ports) <= 1)
                     # save and continue
                     result.append(Parser.SetNode(start, self))
-                    start_port = start.output_control_flow_ports[0]
-                    end_port = self.find_destination_connection(start_port)
-                    end_box = self.port_box_map[end_port]
-                    start = end_box
-                    continue
+
+                    if len(start.output_control_flow_ports) > 0:
+                        start_port = start.output_control_flow_ports[0]
+                        end_port = self.find_destination_connection(start_port)
+                        end_box = self.port_box_map[end_port]
+                        start = end_box
+                        continue
+                    else:
+                        break
                 elif is_return:
                     assert(len(start.output_control_flow_ports) == 0)
                     # This is the end
@@ -971,7 +977,21 @@ class Parser:
 
                     # Branch Control flow should break this loop since we cannot update `start`
                     break
-                
+
+                elif is_function_call:
+                    assert(len(start.output_control_flow_ports) <= 1)
+                    
+                    # save and continue
+                    result.append(Parser.FunctionCallNode(start, self))
+
+                    if len(start.output_control_flow_ports) > 0:
+                        start_port = start.output_control_flow_ports[0]
+                        end_port = self.find_destination_connection(start_port)
+                        end_box = self.port_box_map[end_port]
+                        start = end_box
+                        continue
+                    else:
+                        break
 
         return result
 
