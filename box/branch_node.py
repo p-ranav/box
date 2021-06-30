@@ -13,9 +13,16 @@ class BranchNode:
         condition_box = self.generator.port_box_map[input_port]
 
         # Find temp_results from condition_box
-        condition_result_name = self.generator.temp_results[condition_box]
+        condition_result_name = ""
+        if condition_box in self.generator.temp_results:
+            condition_result_name = self.generator.temp_results[condition_box]
+        else:
+            # The previous box is embedded as the branch condition
+            # Generate the code for this box and embed it in place
+            node = self.generator._create_node(condition_box)
+            condition_result_name = node.to_python("", store_result_in_variable=False, called_by_next_box=True).strip()
 
-        result = indent + "if " + condition_result_name + " == True:\n"
+        result = indent + "if " + condition_result_name + ":\n"
         for statement in self.true_case:
             result += statement.to_python(indent + "    ")
 
