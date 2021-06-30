@@ -3,9 +3,9 @@ from box.token import Token
 
 
 class FunctionDeclarationNode:
-    def __init__(self, box, parser):
+    def __init__(self, box, generator):
         self.box = box
-        self.parser = parser
+        self.generator = generator
 
     def to_python(self, indent="    "):
         # Function signature
@@ -15,7 +15,7 @@ class FunctionDeclarationNode:
         function_name = re.sub("[\W_]", "", function_name)
         result += function_name
 
-        self.parser.function_name = function_name
+        self.generator.function_name = function_name
 
         result += "("
         box_contents = self.box.box_contents.split("\n")

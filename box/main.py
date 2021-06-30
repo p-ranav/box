@@ -1,7 +1,7 @@
 import argparse
 from box.parser import Parser
+from box.generator import Generator
 import os
-
 
 def main(args):
 
@@ -11,7 +11,9 @@ def main(args):
 
     path = os.path.join(os.getcwd(), filename)
     parser = Parser(path)
-    code = parser.to_python(args.e)
+    generator = Generator(parser)
+    
+    code = generator.to_python(args.e)
 
     if args.v:
         print(code)
