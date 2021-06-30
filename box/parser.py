@@ -4,14 +4,15 @@ from box.box import Box
 from box.token import Token
 from box.box_iterator import BoxIterator
 
+
 class Parser:
     def __init__(self, path):
         self.path = path
         self.lines = self._read_into_lines(path)
 
         # {(x1, y1): <Box_1>, (x2, y2): <Box_2>, ...}
-        self.port_box_map = {}        
-                
+        self.port_box_map = {}
+
         # [<Box_1>, <Box_2>, ...]
         self.boxes = self._find_boxes()
 

@@ -9,6 +9,7 @@ from box.return_node import ReturnNode
 from box.function_declaration_node import FunctionDeclarationNode
 from box.function_call_node import FunctionCallNode
 
+
 class Generator:
     def __init__(self, parser):
         self.lines = parser.lines
@@ -25,7 +26,7 @@ class Generator:
         # {<Box_1>: "Box_1_foobar_result", <Box_2>: "Box_2_baz_result", ...}
         self.temp_results = {}
 
-        self.function_name = ""        
+        self.function_name = ""
 
     def _find_start_of_control_flow(self):
         # Find the box with no input control flow ports

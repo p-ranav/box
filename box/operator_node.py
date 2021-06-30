@@ -96,7 +96,9 @@ class OperatorNode:
             operator_arguments = []
             for i, port in enumerate([input_port_0, input_port_1]):
                 box = self.generator.port_box_map[port]
-                operator_arguments.append(self.generator._get_output_data_name(box, port))
+                operator_arguments.append(
+                    self.generator._get_output_data_name(box, port)
+                )
 
             lhs, rhs = operator_arguments
 
