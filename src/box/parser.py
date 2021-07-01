@@ -3,18 +3,23 @@ import uuid
 from box.box import Box
 from box.token import Token
 from box.box_iterator import BoxIterator
+import logging
 
 
 class Parser:
     def __init__(self, path):
         self.path = path
         self.lines = self._read_into_lines(path)
+        logging.debug("Done reading " + path)
+        logging.debug("Found " + str(len(self.lines)) + " lines")
 
         # {(x1, y1): <Box_1>, (x2, y2): <Box_2>, ...}
         self.port_box_map = {}
 
         # [<Box_1>, <Box_2>, ...]
         self.boxes = self._find_boxes()
+
+        logging.debug("Found " + str(len(self.boxes)) + " boxes")
 
     def _read_into_lines(self, path):
         lines = []
@@ -70,6 +75,8 @@ class Parser:
         # Find valid boxes in the input file
         potential_boxes = self._find_potential_boxes()
 
+        logging.debug("Found " + str(len(potential_boxes)) + " potential boxes")
+
         result = []
 
         for start_of_new_box in potential_boxes:
@@ -83,6 +90,8 @@ class Parser:
             output_data_flow_ports = []
             output_control_flow_ports = []
 
+            logging.debug("Reading box at " + str(top_left) + "...")
+
             it = BoxIterator(self.lines, top_left)
 
             # Start moving right
@@ -91,14 +100,16 @@ class Parser:
                 it.right()
 
             # Read box header if one exists
-            if it.current() != Token.HORIZONTAL and it.current() != Token.TOP_RIGHT:
+            if it.current() != Token.HORIZONTAL and it.current() != Token.TOP_RIGHT:                
                 while it.current() and it.current() != Token.HORIZONTAL:
                     box_header += it.current()
                     it.right()
 
+                logging.debug("  Found a box header '" + box_header.strip() + "'")
+
                 if not self._is_valid_box_header(box_header):
                     # This is not a valid box
-                    # TODO: Log a DEBUG error
+                    logging.debug("  Box header is not valid, moving on")
                     continue
 
             while it.current() == Token.HORIZONTAL:
@@ -107,7 +118,8 @@ class Parser:
             # Now we should be in BOX_TOKEN_TOP_RIGHT
             if it.current() != Token.TOP_RIGHT:
                 # This is not a valid box
-                # TODO: Log a DEBUG error
+                logging.debug("  Expected '" + Token.TOP_RIGHT + "', instead found '" + it.current() + "'")
+                logging.debug("  This is not a valid box, moving on")
                 continue
             else:
                 # We've reached top right
@@ -133,14 +145,16 @@ class Parser:
                                 it.down()
                             else:
                                 # Well this is not a valid port, therefore not a valid box
-                                # TODO: Log a DEBUG error
+                                logging.debug("  Expected either '" + Token.DATA_FLOW_PORT + "' or '" + Token.CONTROL_FLOW_PORT + "', instead found '" + it.current() + "'")
+                                logging.debug("  This is not a valid port, moving on")
                                 break
                     else:
                         it.down()
 
                 if it.current() != Token.BOTTOM_RIGHT:
                     # This is not a valid box
-                    # TODO: Log a DEBUG error
+                    logging.debug("  Expected '" + Token.BOTTOM_RIGHT + "', instead found '" + it.current() + "'")
+                    logging.debug("  This is not a valid box, moving on")
                     continue
                 else:
                     # We've reached the bottom right
@@ -153,7 +167,8 @@ class Parser:
 
                     if it.current() != Token.BOTTOM_LEFT:
                         # This is not a valid box
-                        # TODO: Log a DEBUG error
+                        logging.debug("  Expected '" + Token.BOTTOM_LEFT + "', instead found '" + it.current() + "'")
+                        logging.debug("  This is not a valid box, moving on")                        
                         continue
                     else:
                         # We've reached the bottom left
@@ -179,14 +194,16 @@ class Parser:
                                     it.up()
                                 else:
                                     # Well this is not a valid port, therefore not a valid box
-                                    # TODO: Log a DEBUG error
+                                    logging.debug("  Expected either '" + Token.DATA_FLOW_PORT + "' or '" + Token.CONTROL_FLOW_PORT + "', instead found '" + it.current() + "'")
+                                    logging.debug("  This is not a valid port, moving on")
                                     break
                             else:
                                 it.up()
 
                         if it.current() != Token.TOP_LEFT:
                             # This is not a valid box
-                            # TODO: Log a DEBUG error
+                            logging.debug("  Expected '" + Token.TOP_LEFT + "', instead found '" + it.current() + "'")
+                            logging.debug("  This is not a valid box, moving on")                                                    
                             continue
                         else:
                             # This is a valid box
@@ -207,6 +224,8 @@ class Parser:
                                 box_contents += "\n"
                                 i_start += 1
                                 j_start = top_left[1] + 1
+
+                            logging.debug("Found a valid box! Box header = '" + box_header.strip() + "' starting at " + str(top_left))
 
                             # Save the box meta
                             new_box = Box(

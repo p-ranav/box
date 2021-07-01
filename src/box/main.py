@@ -1,6 +1,7 @@
 import argparse
 from box.parser import Parser
 from box.generator import Generator
+import logging
 import os
 
 
@@ -17,20 +18,31 @@ def main():
     
     args = parser.parse_args()
 
+    if args.v:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    else:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.WARNING)    
+
     filename = args.path
+
     eval_args = args.e
     verbosity = args.v
     path = os.path.join(os.getcwd(), filename)
+
+    logging.debug("Reading file " + filename)
+    
     parser = Parser(path)
+
+    logging.debug("Parsed file at " + filename)
     generator = Generator(parser)
+    
+    logging.debug("Generating Python... " + filename)
 
     code = generator.to_python(args.e)
 
-    if args.v:
-        print(code)
-
     if args.o:
         with open(os.path.abspath(args.o), 'w') as output:
+            logging.debug("Writing generated Python to " + args.o)
             output.write(code)
 
     exec(code)
