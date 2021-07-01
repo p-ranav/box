@@ -9,7 +9,6 @@ class WhileLoopNode:
 
     def to_python(self, indent="    "):
         result = indent + "while "
-
         assert len(self.box.input_data_flow_ports) == 1  # the while condition
 
         input_port_0 = self.generator._find_destination_connection(

@@ -221,10 +221,7 @@ class Generator:
 
         return result
 
-    def _create_node(self, box):
-
-        print("- creating node...")
-        
+    def _create_node(self, box):        
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
         is_break = box.box_header == Token.KEYWORD_BREAK
@@ -261,7 +258,6 @@ class Generator:
             return box
 
     def _find_order_of_operations(self, start, global_first_box=True):
-        print("Finding order of operations", start.box_header)
         result = []
 
         # Start from the starting box
@@ -269,254 +265,237 @@ class Generator:
         # Find connections
         # Find control flow boxes, e.g., `Branch`, `For loop` etc.
 
-        # Save the input box
-        result.append(self._create_node(start))
-
-        print(result)
-
-        if global_first_box and len(start.output_control_flow_ports) != 1:
-            # Possibilities:
-            # 1. Too many output control flow ports
-            # 2. Zero control flow ports
-            return result
-        elif len(start.output_control_flow_ports) == 0:
-            # In case of `Return` boxes
-            # There won't be any output_control_flow_ports
-            # Just return early
-            return result
-        else:
-
-            start_port = start.output_control_flow_ports[0]
-            end_port = self._find_destination_connection(start_port)
-            end_box = None
-
-            if end_port in self.port_box_map:
-                end_box = self.port_box_map[end_port]
-            else:
+        while True:
+            if len(start.output_control_flow_ports) == 0:
+                # End of control flow
+                result.append(self._create_node(start))
                 return result
 
-            # This is the second box
-            start = end_box
+            is_math_operation = start.box_header == ""
+            is_function = (
+                start.box_header.startswith(Token.FUNCTION_START)
+                and len(start.input_control_flow_ports) == 0
+                and len(start.output_control_flow_ports) == 1
+            )
+            is_function_call = (
+                start.box_header.startswith(Token.FUNCTION_START)
+                and len(start.input_control_flow_ports) <= 1
+                and len(start.output_control_flow_ports) <= 1
+            )
+            is_branch = start.box_header == Token.KEYWORD_BRANCH
+            is_for_loop = start.box_header == Token.KEYWORD_FOR_LOOP
+            is_for_each = start.box_header == Token.KEYWORD_FOR_EACH
+            is_while_loop = start.box_header == Token.KEYWORD_WHILE_LOOP
+            is_return = start.box_header == Token.KEYWORD_RETURN
+            is_break = start.box_header == Token.KEYWORD_BREAK
+            is_continue = start.box_header == Token.KEYWORD_CONTINUE
+            is_set = start.box_header == Token.KEYWORD_SET
 
-            while True:
-                if len(start.output_control_flow_ports) == 0:
-                    # End of control flow
-                    result.append(self._create_node(start))
-                    print("EXITING WITH RESULT", result)
-                    return result
+            if is_function:
+                result.append(self._create_node(start))
 
-                is_math_operation = start.box_header == ""
-                is_function = (
-                    start.box_header.startswith(Token.FUNCTION_START)
-                    and len(start.input_control_flow_ports) == 0
-                    and len(start.output_control_flow_ports) == 1
-                )
-                is_function_call = (
-                    start.box_header.startswith(Token.FUNCTION_START)
-                    and len(start.input_control_flow_ports) <= 1
-                    and len(start.output_control_flow_ports) <= 1
-                )
-                is_branch = start.box_header == Token.KEYWORD_BRANCH
-                is_for_loop = start.box_header == Token.KEYWORD_FOR_LOOP
-                is_for_each = start.box_header == Token.KEYWORD_FOR_EACH
-                is_while_loop = start.box_header == Token.KEYWORD_WHILE_LOOP
-                is_return = start.box_header == Token.KEYWORD_RETURN
-                is_break = start.box_header == Token.KEYWORD_BREAK
-                is_continue = start.box_header == Token.KEYWORD_CONTINUE
-                is_set = start.box_header == Token.KEYWORD_SET
-
-                if is_math_operation:
-                    assert len(start.output_control_flow_ports) == 1
-                    # save and continue
-                    result.append(OperatorNode(start, self))
-
+                if len(start.output_control_flow_ports) > 0:
                     start_port = start.output_control_flow_ports[0]
                     end_port = self._find_destination_connection(start_port)
                     end_box = self.port_box_map[end_port]
                     start = end_box
                     continue
-                elif is_set:
-                    assert len(start.output_control_flow_ports) <= 1
-                    # save and continue
-                    result.append(SetNode(start, self))
-
-                    if len(start.output_control_flow_ports) > 0:
-                        start_port = start.output_control_flow_ports[0]
-                        end_port = self._find_destination_connection(start_port)
-                        end_box = self.port_box_map[end_port]
-                        start = end_box
-                        continue
-                    else:
-                        break
-                elif is_return:
-                    assert len(start.output_control_flow_ports) == 0
-                    # This is the end
-                    # Stop here and return
-                    result.append(ReturnNode(start, self))
+                else:
                     break
-                elif is_break:
-                    assert len(start.output_control_flow_ports) == 0
-                    # This is a break statement
-                    # Break here since there won't be any other statements
-                    # in this control flow
-                    result.append(BreakNode(start, self))
+
+            if is_math_operation:
+                assert len(start.output_control_flow_ports) == 1
+                # save and continue
+                result.append(OperatorNode(start, self))
+
+                start_port = start.output_control_flow_ports[0]
+                end_port = self._find_destination_connection(start_port)
+                end_box = self.port_box_map[end_port]
+                start = end_box
+                continue
+            elif is_set:
+                assert len(start.output_control_flow_ports) <= 1
+                # save and continue
+                result.append(SetNode(start, self))
+
+                if len(start.output_control_flow_ports) > 0:
+                    start_port = start.output_control_flow_ports[0]
+                    end_port = self._find_destination_connection(start_port)
+                    end_box = self.port_box_map[end_port]
+                    start = end_box
+                    continue
+                else:
                     break
-                elif is_continue:
-                    assert len(start.output_control_flow_ports) == 0
-                    # This is a continue statement
-                    # Break here since there won't be any other statements
-                    # in this control flow
-                    result.append(ContinueNode(start, self))
-                    break
-                elif is_branch:
-                    assert len(start.output_control_flow_ports) >= 1
-                    assert len(start.output_control_flow_ports) <= 2
-                    # Two output control flow ports here
-                    # The `True` case, and the `False` case
-                    true_output_port = start.output_control_flow_ports[0]
-                    true_case_start_port = self._find_destination_connection(
-                        true_output_port
+            elif is_return:
+                assert len(start.output_control_flow_ports) == 0
+                # This is the end
+                # Stop here and return
+                result.append(ReturnNode(start, self))
+                break
+            elif is_break:
+                assert len(start.output_control_flow_ports) == 0
+                # This is a break statement
+                # Break here since there won't be any other statements
+                # in this control flow
+                result.append(BreakNode(start, self))
+                break
+            elif is_continue:
+                assert len(start.output_control_flow_ports) == 0
+                # This is a continue statement
+                # Break here since there won't be any other statements
+                # in this control flow
+                result.append(ContinueNode(start, self))
+                break
+            elif is_branch:
+                assert len(start.output_control_flow_ports) >= 1
+                assert len(start.output_control_flow_ports) <= 2
+                # Two output control flow ports here
+                # The `True` case, and the `False` case
+                true_output_port = start.output_control_flow_ports[0]
+                true_case_start_port = self._find_destination_connection(
+                    true_output_port
+                )
+                true_case_start_box = self.port_box_map[true_case_start_port]
+                true_case_control_flow = self._find_order_of_operations(
+                    true_case_start_box, False
+                )
+
+                false_case_control_flow = []
+                if len(start.output_control_flow_ports) > 1:
+                    false_output_port = start.output_control_flow_ports[1]
+                    false_case_start_port = self._find_destination_connection(
+                        false_output_port
                     )
-                    true_case_start_box = self.port_box_map[true_case_start_port]
-                    true_case_control_flow = self._find_order_of_operations(
-                        true_case_start_box, False
+                    false_case_start_box = self.port_box_map[false_case_start_port]                        
+                    false_case_control_flow = self._find_order_of_operations(
+                        false_case_start_box, False
                     )
 
-                    false_case_control_flow = []
-                    if len(start.output_control_flow_ports) > 1:
-                        false_output_port = start.output_control_flow_ports[1]
-                        false_case_start_port = self._find_destination_connection(
-                            false_output_port
-                        )
-                        false_case_start_box = self.port_box_map[false_case_start_port]                        
-                        false_case_control_flow = self._find_order_of_operations(
-                            false_case_start_box, False
-                        )
-
-                    result.append(
-                        BranchNode(
-                            start, true_case_control_flow, false_case_control_flow, self
-                        )
+                result.append(
+                    BranchNode(
+                        start, true_case_control_flow, false_case_control_flow, self
                     )
+                )
 
-                    # Branch Control flow should break this loop since we cannot update `start`
-                    break
-                elif is_for_loop:
-                    assert len(start.output_control_flow_ports) >= 1
-                    assert len(start.output_control_flow_ports) <= 2
-                    # Two output control flow ports here
-                    # The `Loop body` case, and the `Completed` case
-                    loop_body_output_port = start.output_control_flow_ports[0]
-                    loop_body_case_start_port = self._find_destination_connection(
-                        loop_body_output_port
+                # Branch Control flow should break this loop since we cannot update `start`
+                break
+            elif is_for_loop:
+                assert len(start.output_control_flow_ports) >= 1
+                assert len(start.output_control_flow_ports) <= 2
+                # Two output control flow ports here
+                # The `Loop body` case, and the `Completed` case
+                loop_body_output_port = start.output_control_flow_ports[0]
+                loop_body_case_start_port = self._find_destination_connection(
+                    loop_body_output_port
+                )
+                loop_body_case_start_box = self.port_box_map[
+                    loop_body_case_start_port
+                ]
+                loop_body_case_control_flow = self._find_order_of_operations(
+                    loop_body_case_start_box, False
+                )
+                result.append(ForLoopNode(start, loop_body_case_control_flow, self))
+
+                if len(start.output_control_flow_ports) > 1:
+                    # Completed case provided
+                    completed_output_port = start.output_control_flow_ports[1]
+                    completed_case_start_port = self._find_destination_connection(
+                        completed_output_port
                     )
-                    loop_body_case_start_box = self.port_box_map[
-                        loop_body_case_start_port
+                    completed_case_start_box = self.port_box_map[
+                        completed_case_start_port
                     ]
-                    loop_body_case_control_flow = self._find_order_of_operations(
-                        loop_body_case_start_box, False
+                    completed_case_control_flow = self._find_order_of_operations(
+                        completed_case_start_box, False
                     )
-                    result.append(ForLoopNode(start, loop_body_case_control_flow, self))
+                    result.extend(completed_case_control_flow)
 
-                    if len(start.output_control_flow_ports) > 1:
-                        # Completed case provided
-                        completed_output_port = start.output_control_flow_ports[1]
-                        completed_case_start_port = self._find_destination_connection(
-                            completed_output_port
-                        )
-                        completed_case_start_box = self.port_box_map[
-                            completed_case_start_port
-                        ]
-                        completed_case_control_flow = self._find_order_of_operations(
-                            completed_case_start_box, False
-                        )
-                        result.extend(completed_case_control_flow)
+                break
+            elif is_while_loop:
+                assert len(start.output_control_flow_ports) >= 1
+                assert len(start.output_control_flow_ports) <= 2
+                # Two output control flow ports here
+                # The `Loop body` case, and the `Completed` case
+                loop_body_output_port = start.output_control_flow_ports[0]
+                loop_body_case_start_port = self._find_destination_connection(
+                    loop_body_output_port
+                )
+                loop_body_case_start_box = self.port_box_map[
+                    loop_body_case_start_port
+                ]
+                loop_body_case_control_flow = self._find_order_of_operations(
+                    loop_body_case_start_box, False
+                )
+                result.append(
+                    WhileLoopNode(start, loop_body_case_control_flow, self)
+                )
 
-                    break
-                elif is_while_loop:
-                    print("PARSING WHILE LOOP")
-                    assert len(start.output_control_flow_ports) >= 1
-                    assert len(start.output_control_flow_ports) <= 2
-                    # Two output control flow ports here
-                    # The `Loop body` case, and the `Completed` case
-                    loop_body_output_port = start.output_control_flow_ports[0]
-                    loop_body_case_start_port = self._find_destination_connection(
-                        loop_body_output_port
+                if len(start.output_control_flow_ports) > 1:
+                    # Completed case provided
+                    completed_output_port = start.output_control_flow_ports[1]
+                    completed_case_start_port = self._find_destination_connection(
+                        completed_output_port
                     )
-                    loop_body_case_start_box = self.port_box_map[
-                        loop_body_case_start_port
+                    completed_case_start_box = self.port_box_map[
+                        completed_case_start_port
                     ]
-                    loop_body_case_control_flow = self._find_order_of_operations(
-                        loop_body_case_start_box, False
+                    completed_case_control_flow = self._find_order_of_operations(
+                        completed_case_start_box, False
                     )
-                    result.append(
-                        WhileLoopNode(start, loop_body_case_control_flow, self)
+                    result.extend(completed_case_control_flow)
+
+                break
+
+            elif is_for_each:
+                assert len(start.input_control_flow_ports) == 1
+                assert len(start.output_control_flow_ports) >= 1
+                assert len(start.output_control_flow_ports) <= 2
+                # Two output control flow ports here
+                # The `Loop body` case, and the `Completed` case
+                loop_body_output_port = start.output_control_flow_ports[0]
+                loop_body_case_start_port = self._find_destination_connection(
+                    loop_body_output_port
+                )
+                loop_body_case_start_box = self.port_box_map[
+                    loop_body_case_start_port
+                ]
+                loop_body_case_control_flow = self._find_order_of_operations(
+                    loop_body_case_start_box, False
+                )
+                result.append(ForEachNode(start, loop_body_case_control_flow, self))
+
+                if len(start.output_control_flow_ports) > 1:
+                    # Completed case provided
+                    completed_output_port = start.output_control_flow_ports[1]
+                    completed_case_start_port = self._find_destination_connection(
+                        completed_output_port
                     )
-
-                    if len(start.output_control_flow_ports) > 1:
-                        # Completed case provided
-                        completed_output_port = start.output_control_flow_ports[1]
-                        completed_case_start_port = self._find_destination_connection(
-                            completed_output_port
-                        )
-                        completed_case_start_box = self.port_box_map[
-                            completed_case_start_port
-                        ]
-                        completed_case_control_flow = self._find_order_of_operations(
-                            completed_case_start_box, False
-                        )
-                        result.extend(completed_case_control_flow)
-
-                    break
-
-                elif is_for_each:
-                    assert len(start.input_control_flow_ports) == 1
-                    assert len(start.output_control_flow_ports) >= 1
-                    assert len(start.output_control_flow_ports) <= 2
-                    # Two output control flow ports here
-                    # The `Loop body` case, and the `Completed` case
-                    loop_body_output_port = start.output_control_flow_ports[0]
-                    loop_body_case_start_port = self._find_destination_connection(
-                        loop_body_output_port
-                    )
-                    loop_body_case_start_box = self.port_box_map[
-                        loop_body_case_start_port
+                    completed_case_start_box = self.port_box_map[
+                        completed_case_start_port
                     ]
-                    loop_body_case_control_flow = self._find_order_of_operations(
-                        loop_body_case_start_box, False
+                    completed_case_control_flow = self._find_order_of_operations(
+                        completed_case_start_box, False
                     )
-                    result.append(ForEachNode(start, loop_body_case_control_flow, self))
+                    result.extend(completed_case_control_flow)
 
-                    if len(start.output_control_flow_ports) > 1:
-                        # Completed case provided
-                        completed_output_port = start.output_control_flow_ports[1]
-                        completed_case_start_port = self._find_destination_connection(
-                            completed_output_port
-                        )
-                        completed_case_start_box = self.port_box_map[
-                            completed_case_start_port
-                        ]
-                        completed_case_control_flow = self._find_order_of_operations(
-                            completed_case_start_box, False
-                        )
-                        result.extend(completed_case_control_flow)
+                break
 
+            elif is_function_call:
+                assert len(start.output_control_flow_ports) <= 1
+
+                # save and continue
+                result.append(FunctionCallNode(start, self))
+
+                if len(start.output_control_flow_ports) > 0:
+                    start_port = start.output_control_flow_ports[0]
+                    end_port = self._find_destination_connection(start_port)
+                    end_box = self.port_box_map[end_port]
+                    start = end_box
+                    continue
+                else:
                     break
-
-                elif is_function_call:
-                    assert len(start.output_control_flow_ports) <= 1
-
-                    # save and continue
-                    result.append(FunctionCallNode(start, self))
-
-                    if len(start.output_control_flow_ports) > 0:
-                        start_port = start.output_control_flow_ports[0]
-                        end_port = self._find_destination_connection(start_port)
-                        end_box = self.port_box_map[end_port]
-                        start = end_box
-                        continue
-                    else:
-                        break
+            else:
+                result.append(self._create_node(start))
 
         return result
 

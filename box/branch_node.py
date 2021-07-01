@@ -26,7 +26,6 @@ class BranchNode:
 
         result = indent + "if " + condition_result_name + ":\n"
         for statement in self.true_case:
-            print("THIS IS THE STATEMENT", statement.to_python(""))
             result += statement.to_python(indent + "    ")
 
         if len(self.false_case) > 0:
