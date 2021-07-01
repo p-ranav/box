@@ -105,6 +105,19 @@ $ box samples/hello_world.box -e
 Hello,World!
 ```
 
+### Features
+
+* ✅ Function declarations
+* ✅ Operators - Unary, binary, and assignment operators
+* ✅ Set - set the value of variables
+* ✅ Function calls - Call Python built-in functions
+* ✅ Branch - if-else box
+* ✅ For Loop
+* ✅ While Loop
+* ✅ 'For Each' for iterables
+* ✅ Break and Continue boxes
+* ✅ Return box to return values from functions
+
 ### Gotchas
 
 * The interpreter will likely fail if you have tabs in your file - replace all tabs with the appropriate number of spaces
