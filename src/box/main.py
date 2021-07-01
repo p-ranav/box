@@ -10,7 +10,7 @@ def main():
     parser.add_argument("path", help="Path to box file")
     parser.add_argument("-v", action="store_true", help="Toggle verbosity")
     parser.add_argument("-e", nargs="*", help="Arguments to pass to box function")
-    args = parser.parse_args()    
+    args = parser.parse_args()
 
     filename = args.path
     eval_args = args.e
