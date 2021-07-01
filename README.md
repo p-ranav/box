@@ -98,6 +98,13 @@ Here's a simple hello world example. This example declares a `Greet()` function 
                    └──────────────────┘    └───────────┘
 ```
 
+Execute the above program with the box interpreter like so:
+
+```console
+$ box samples/hello_world.box -e
+Hello,World!
+```
+
 ### Gotchas
 
 * The interpreter will likely fail if you have tabs in your file - replace all tabs with the appropriate number of spaces
