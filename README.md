@@ -5,7 +5,7 @@
 `box` is a text-based visual programming language inspired by Unreal Engine blueprint function graphs. 
 
 ```console
-$ cat samples/factorial.box
+$ cat factorial.box
 
  ┌─ƒ(Factorial)───┐                     ┌─[Branch]─────┐                       ┌─[Set]─┐
  │               ►┼─────────────────────┼►       True ►┼───────────────────────┼►     ►┼─────────┐         ┌─[For Loop]───────────┐                   ┌───────┐
@@ -28,7 +28,7 @@ $ cat samples/factorial.box
                                                    └────┘     └──────────┘                                               ┌─────────┐   └──┼►         │
                                                                                                                          │ result ○┼──────┼○         │
                                                                                                                          └─────────┘      └──────────┘
-$ box samples/factorial.box -e 5
+$ box factorial.box -e 5
 120
 
 $ box samples/factorial.box -e 5
