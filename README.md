@@ -31,6 +31,18 @@ $ cat factorial.box
 $ box factorial.box -e 5
 120
 
-$ box samples/factorial.box -e 5
+$ box factorial.box -e 5
 87178291200
+
+$ box factorial.box -o factorial.py
+
+$ cat factorial.py
+def Factorial(n):
+    if (n >= 1):
+        result = 1
+        for index_8b6ee4f2 in range(1, (n + 1), 1):
+            result *= index_8b6ee4f2
+        return result
+    else:
+        return 1
 ```
