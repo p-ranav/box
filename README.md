@@ -108,15 +108,16 @@ Hello,World!
 ### Features
 
 * ✅ Function declarations
+* ✅ Defining constants and variables
 * ✅ Operators - Unary, binary, and assignment operators
-* ✅ Set - set the value of variables
+* ✅ `[Set]` - set the value of variables
 * ✅ Function calls - Call Python built-in functions
-* ✅ Branch - if-else box
-* ✅ For Loop
-* ✅ While Loop
-* ✅ 'For Each' for iterables
-* ✅ Break and Continue boxes
-* ✅ Return box to return values from functions
+* ✅ `[Branch]` - if-else box
+* ✅ `[For Loop]` - Python-style for loop with (start,end,step)
+* ✅ `[While Loop]` - Python-style while loop
+* ✅ `[For Each]` for iterables
+* ✅ `[Break]` and `[Continue]` boxes
+* ✅ `[Return]` box to return values from functions
 
 ### Gotchas
 
