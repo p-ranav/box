@@ -1,9 +1,13 @@
+import logging
+
+
 class BoxIterator:
     # Class with functions to enable navigating around a box
     def __init__(self, lines, begin_xy):
         self.lines = lines
         self.current_x = begin_xy[0]
         self.current_y = begin_xy[1]
+        logging.debug("Box iteration starting at " + str(begin_xy))
 
     def current(self):
         if self.current_x < len(self.lines):

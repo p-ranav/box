@@ -31,7 +31,11 @@ class Generator:
         # and reaching the final box
         self.flow_of_control = self._find_order_of_operations(self.starting_box, True)
 
-        logging.debug("Identified flow of control " + str(len(self.flow_of_control)) + " boxes in control flow")
+        logging.debug(
+            "Identified flow of control "
+            + str(len(self.flow_of_control))
+            + " boxes in control flow"
+        )
         for i, c in enumerate(self.flow_of_control):
             logging.debug("  " + str(i) + " " + str(type(c)))
 
@@ -54,7 +58,13 @@ class Generator:
         return result[0]
 
     def _find_destination_connection(self, start_port, direction="right"):
-        logging.debug("Finding destination connection from " + str(start_port) + " (direction = " + direction + ")")
+        logging.debug(
+            "Finding destination connection from "
+            + str(start_port)
+            + " (direction = "
+            + direction
+            + ")"
+        )
         it = BoxIterator(self.lines, start_port)
 
         # Start navigation

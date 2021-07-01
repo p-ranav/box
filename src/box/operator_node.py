@@ -1,3 +1,6 @@
+import logging
+
+
 class OperatorNode:
 
     # Arithmetic operators
@@ -99,10 +102,12 @@ class OperatorNode:
         self.box = box
         self.generator = generator
         self._result_prefix = "op"
+        logging.debug("Constructed operator node")
 
     def to_python(
         self, indent="    ", store_result_in_variable=True, called_by_next_box=False
     ):
+        logging.debug("Generating Python for operator node")
         result = ""
 
         # Check number of input ports
@@ -111,6 +116,7 @@ class OperatorNode:
         operator = box_contents
 
         if operator in OperatorNode.UNARY_OPERATORS:
+            logging.debug("  This is a unary operator")
             assert len(self.box.input_data_flow_ports) == 1
 
             input_port_0 = self.generator._find_destination_connection(
@@ -121,15 +127,18 @@ class OperatorNode:
             argument = self.generator._get_output_data_name(input_box, input_port_0)
 
             if store_result_in_variable:
+                logging.debug("  Result will be stored in a variable")
                 operator_result = (
                     self._result_prefix + "_" + self.box.uuid_short() + "_result"
                 )
                 self.generator.temp_results[self.box] = operator_result
                 result = indent + operator_result + " = "
+                logging.debug("  Variable name: " + operator_result)
 
             result += "(not " + argument + ")\n"
 
         elif operator in OperatorNode.BINARY_OPERATORS:
+            logging.debug("  This is a binary operator")
             # There must be exactly 2 input data flow ports for this node
             assert len(self.box.input_data_flow_ports) == 2
 
@@ -155,15 +164,18 @@ class OperatorNode:
             #
             # Create a variable to store the result
             if store_result_in_variable:
+                logging.debug("  Result will be stored in a variable")
                 operator_result = (
                     self._result_prefix + "_" + self.box.uuid_short() + "_result"
                 )
                 self.generator.temp_results[self.box] = operator_result
                 result = indent + operator_result + " = "
+                logging.debug("  Variable name: " + operator_result)
 
             result += "(" + lhs + " " + operator + " " + rhs + ")\n"
 
         elif operator in OperatorNode.INCREMENT_DECREMENT_OPERATORS:
+            logging.debug("  This is an increment/decrement operator")
 
             # There must be exactly 1 input data flow port for this node
             assert len(self.box.input_data_flow_ports) == 1
@@ -188,11 +200,14 @@ class OperatorNode:
             #
             # Create a variable to store the result
             if store_result_in_variable:
+                logging.debug("  Result will be stored in a variable")
                 result = indent + input_arg + " = "
+                logging.debug("  Variable name: " + input_arg)
 
             result += "(" + input_arg + " " + operator_string + " 1)\n"
 
         elif operator in OperatorNode.ASSIGNMENT_OPERATORS:
+            logging.debug("  This is an assignment operator")
             # There must be exactly 2 input data flow ports for this node
             assert len(self.box.input_data_flow_ports) == 2
             assert len(self.box.output_data_flow_ports) == 0
@@ -219,7 +234,9 @@ class OperatorNode:
             #
             # Create a variable to store the result
             if store_result_in_variable:
+                logging.debug("  Result will be stored in a variable")
                 result = indent + lhs + " " + operator + " "
+                logging.debug("  Variable name: " + lhs)
 
             result += rhs + "\n"
 

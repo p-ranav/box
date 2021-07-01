@@ -1,9 +1,14 @@
+import logging
+
+
 class SetNode:
     def __init__(self, box, generator):
         self.box = box
         self.generator = generator
+        logging.debug("Constructed set node")
 
     def to_python(self, indent="    "):
+        logging.debug("Generating Python for set node")
         assert len(self.box.input_data_flow_ports) == 2
 
         input_port_0 = self.generator._find_destination_connection(
@@ -27,6 +32,8 @@ class SetNode:
         # Create a variable to store the result
 
         self.generator.temp_results[self.box] = lhs
+
+        logging.debug("Setting variable " + lhs + " with value " + rhs)
 
         result = indent + lhs + " = " + rhs + "\n"
 

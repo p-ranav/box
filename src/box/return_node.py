@@ -1,9 +1,14 @@
+import logging
+
+
 class ReturnNode:
     def __init__(self, box, generator):
         self.box = box
         self.generator = generator
+        logging.debug("Constructed return node")
 
     def to_python(self, indent="    "):
+        logging.debug("Generating Python for return node")
         result = indent + "return"
 
         return_vals = []
@@ -14,6 +19,8 @@ class ReturnNode:
             return_vals.append(
                 self.generator._get_output_data_name(input_box, input_port)
             )
+
+        logging.debug("  Returning " + str(len(return_vals)) + " values")
 
         for i, val in enumerate(return_vals):
             result += " " + val

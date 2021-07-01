@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 
@@ -26,6 +27,7 @@ class Box:
         self.output_data_flow_ports = output_data_flow_ports
         self.output_control_flow_ports = output_control_flow_ports
         self.uuid = uuid.uuid4()
+        logging.debug("Constructed box with UUID: " + str(self.uuid))
 
     def uuid_short(self):
         return str(self.uuid)[:8]
