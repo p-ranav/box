@@ -16,31 +16,7 @@ class WhileLoopNode:
             self.box.input_data_flow_ports[0], "left"
         )
         input_box = self.generator.port_box_map[input_port_0]
-
-        # Check if the previous box is either
-        # - OperatorNode
-        # - FunctionCallNode
-        # In these cases,
-        # Wrap the previous data flow box and get its emitted python code
-        # This is the WhileLoop condition
-        is_operator = self.generator._is_operator(input_box.box_contents)
-        is_function = input_box.box_header.startswith(Token.FUNCTION_START)
-        is_function_call = is_function and len(input_box.input_control_flow_ports) == 1
-
-        condition = ""
-
-        if is_operator or is_function_call:
-            condition = (
-                self.generator._create_node(input_box)
-                .to_python(
-                    indent="",
-                    store_result_in_variable=False,
-                    called_by_next_box=True,
-                )
-                .strip()
-            )
-        else:
-            condition = self.generator._get_output_data_name(input_box, input_port_0)
+        condition = self.generator._get_output_data_name(input_box, input_port_0)
 
         result += condition + ":\n"
 

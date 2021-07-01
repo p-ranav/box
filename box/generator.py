@@ -222,6 +222,9 @@ class Generator:
         return result
 
     def _create_node(self, box):
+
+        print("- creating node...")
+        
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
         is_break = box.box_header == Token.KEYWORD_BREAK
@@ -258,6 +261,7 @@ class Generator:
             return box
 
     def _find_order_of_operations(self, start, global_first_box=True):
+        print("Finding order of operations", start.box_header)
         result = []
 
         # Start from the starting box
@@ -267,6 +271,8 @@ class Generator:
 
         # Save the input box
         result.append(self._create_node(start))
+
+        print(result)
 
         if global_first_box and len(start.output_control_flow_ports) != 1:
             # Possibilities:
@@ -296,6 +302,7 @@ class Generator:
                 if len(start.output_control_flow_ports) == 0:
                     # End of control flow
                     result.append(self._create_node(start))
+                    print("EXITING WITH RESULT", result)
                     return result
 
                 is_math_operation = start.box_header == ""
@@ -362,28 +369,29 @@ class Generator:
                     result.append(ContinueNode(start, self))
                     break
                 elif is_branch:
-                    assert len(start.output_control_flow_ports) == 2
+                    assert len(start.output_control_flow_ports) >= 1
+                    assert len(start.output_control_flow_ports) <= 2
                     # Two output control flow ports here
                     # The `True` case, and the `False` case
                     true_output_port = start.output_control_flow_ports[0]
-                    false_output_port = start.output_control_flow_ports[1]
-
                     true_case_start_port = self._find_destination_connection(
                         true_output_port
                     )
-                    false_case_start_port = self._find_destination_connection(
-                        false_output_port
-                    )
-
                     true_case_start_box = self.port_box_map[true_case_start_port]
-                    false_case_start_box = self.port_box_map[false_case_start_port]
-
                     true_case_control_flow = self._find_order_of_operations(
                         true_case_start_box, False
                     )
-                    false_case_control_flow = self._find_order_of_operations(
-                        false_case_start_box, False
-                    )
+
+                    false_case_control_flow = []
+                    if len(start.output_control_flow_ports) > 1:
+                        false_output_port = start.output_control_flow_ports[1]
+                        false_case_start_port = self._find_destination_connection(
+                            false_output_port
+                        )
+                        false_case_start_box = self.port_box_map[false_case_start_port]                        
+                        false_case_control_flow = self._find_order_of_operations(
+                            false_case_start_box, False
+                        )
 
                     result.append(
                         BranchNode(
@@ -426,6 +434,7 @@ class Generator:
 
                     break
                 elif is_while_loop:
+                    print("PARSING WHILE LOOP")
                     assert len(start.output_control_flow_ports) >= 1
                     assert len(start.output_control_flow_ports) <= 2
                     # Two output control flow ports here
