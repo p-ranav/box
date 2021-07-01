@@ -11,10 +11,13 @@ from box.function_declaration_node import FunctionDeclarationNode
 from box.function_call_node import FunctionCallNode
 from box.break_node import BreakNode
 from box.continue_node import ContinueNode
+import logging
 
 
 class Generator:
     def __init__(self, parser):
+        logging.debug("Constructing generator")
+        self.path = parser.path
         self.lines = parser.lines
         self.boxes = parser.boxes
         self.port_box_map = parser.port_box_map
@@ -22,9 +25,15 @@ class Generator:
         # <Box_first> - The box from where control flow starts
         self.starting_box = self._find_start_of_control_flow()
 
+        logging.debug("Found starting box " + self.starting_box.box_header.strip())
+
         # List of boxes - Starting from the first box
         # and reaching the final box
         self.flow_of_control = self._find_order_of_operations(self.starting_box, True)
+
+        logging.debug("Identified flow of control " + str(len(self.flow_of_control)) + " boxes in control flow")
+        for i, c in enumerate(self.flow_of_control):
+            logging.debug("  " + str(i) + " " + str(type(c)))
 
         # {<Box_1>: "Box_1_foobar_result", <Box_2>: "Box_2_baz_result", ...}
         self.temp_results = {}
@@ -41,11 +50,11 @@ class Generator:
             and len(box.output_control_flow_ports) == 1
         ]
         if len(result) != 1:
-            # TODO: Log a DEBUG error
-            pass
+            logging.error("Cannot find start of control flow in program: " + self.path)
         return result[0]
 
     def _find_destination_connection(self, start_port, direction="right"):
+        logging.debug("Finding destination connection from " + str(start_port) + " (direction = " + direction + ")")
         it = BoxIterator(self.lines, start_port)
 
         # Start navigation
@@ -54,9 +63,7 @@ class Generator:
         elif direction == "left":
             it.left()
         else:
-            # TODO: report error
-            # Not allowed
-            pass
+            logging.error("Unsupported direction '" + direction + "'")
 
         while True:
             if it.current() == Token.HORIZONTAL:
@@ -136,9 +143,11 @@ class Generator:
             if is_return:
                 result = True
                 break
+        logging.debug("Checking for return boxes... " + str(result))
         return result
 
     def _sanitize_box_contents(self, box_contents):
+        logging.debug("Sanitizing box contents")
         box_contents = box_contents.strip()
         box_contents = box_contents.replace(Token.DATA_FLOW_PORT, "")
         box_contents = box_contents.replace(Token.CONTROL_FLOW_PORT, "")
@@ -148,15 +157,22 @@ class Generator:
         return box_contents
 
     def _is_operator(self, box_contents):
+        logging.debug("Checking if box is an operator")
         text = self._sanitize_box_contents(box_contents)
-        return (
+        result = (
             text in OperatorNode.UNARY_OPERATORS
             or text in OperatorNode.BINARY_OPERATORS
             or text in OperatorNode.INCREMENT_DECREMENT_OPERATORS
             or text in OperatorNode.ASSIGNMENT_OPERATORS
         )
+        if result:
+            logging.debug("  It is!")
+        else:
+            logging.debug("  It is not an operator")
+        return result
 
     def _get_output_data_name(self, box, port):
+        logging.debug("Getting output data name")
         result = ""
 
         is_operator = self._is_operator(box.box_contents)
@@ -176,6 +192,7 @@ class Generator:
         is_set = box.box_header == Token.KEYWORD_SET
 
         if is_function:
+            logging.debug("This box is a function declaration")
             # This is a function declaration box
             # This box could have multiple parameters
             col_start = box.top_left[1] + 1
@@ -184,8 +201,9 @@ class Generator:
 
             for col in range(col_start, col_end):
                 result += self.lines[row][col]
-                result = self._sanitize_box_contents(result)
+            result = self._sanitize_box_contents(result)
         elif is_function_call:
+            logging.debug("This box is a function call")
             if box in self.temp_results:
                 result = self.temp_results[box]
             else:
@@ -196,8 +214,10 @@ class Generator:
                     "", store_result_in_variable=False, called_by_next_box=True
                 ).strip()
         elif is_constant_or_variable:
+            logging.debug("This box is a constant or variable")
             result = self._sanitize_box_contents(box.box_contents)
         elif is_operator:
+            logging.debug("This box is an operator")
             if box in self.temp_results:
                 result = self.temp_results[box]
             else:
@@ -207,12 +227,14 @@ class Generator:
                     "", store_result_in_variable=False, called_by_next_box=True
                 ).strip()
         elif is_for_loop or is_for_each:
+            logging.debug("This box is a for loop or for-each loop")
             if box in self.temp_results:
                 result = self.temp_results[box]
             else:
                 # TODO: report error
                 pass
         elif is_set:
+            logging.debug("This box is a set")
             if box in self.temp_results:
                 result = self.temp_result[box]
             else:
@@ -222,6 +244,7 @@ class Generator:
         return result
 
     def _create_node(self, box):
+        logging.debug("Creating node...")
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
         is_break = box.box_header == Token.KEYWORD_BREAK
@@ -253,8 +276,7 @@ class Generator:
         elif is_function_call:
             return FunctionCallNode(box, self)
         else:
-            # TODO: Throw an error
-            # Unrecognized box type
+            logging.error("Unrecognized box type")
             return box
 
     def _find_order_of_operations(self, start, global_first_box=True):
@@ -492,6 +514,7 @@ class Generator:
         return result
 
     def to_python(self, eval_args, indent="    "):
+        logging.debug("Generating python...")
         assert len(self.flow_of_control) > 1
         first = self.flow_of_control[0]
         assert type(first) == type(FunctionDeclarationNode(None, self))
@@ -519,5 +542,8 @@ class Generator:
             result += ")"
             if has_return:
                 result += ")"
+
+        logging.debug("Done generating Python")
+        logging.debug("\n" + result)
 
         return result
