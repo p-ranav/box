@@ -221,7 +221,7 @@ class Generator:
 
         return result
 
-    def _create_node(self, box):        
+    def _create_node(self, box):
         is_math_operation = box.box_header == ""
         is_return = box.box_header == Token.KEYWORD_RETURN
         is_break = box.box_header == Token.KEYWORD_BREAK
@@ -366,7 +366,7 @@ class Generator:
                     false_case_start_port = self._find_destination_connection(
                         false_output_port
                     )
-                    false_case_start_box = self.port_box_map[false_case_start_port]                        
+                    false_case_start_box = self.port_box_map[false_case_start_port]
                     false_case_control_flow = self._find_order_of_operations(
                         false_case_start_box, False
                     )
@@ -388,9 +388,7 @@ class Generator:
                 loop_body_case_start_port = self._find_destination_connection(
                     loop_body_output_port
                 )
-                loop_body_case_start_box = self.port_box_map[
-                    loop_body_case_start_port
-                ]
+                loop_body_case_start_box = self.port_box_map[loop_body_case_start_port]
                 loop_body_case_control_flow = self._find_order_of_operations(
                     loop_body_case_start_box, False
                 )
@@ -420,15 +418,11 @@ class Generator:
                 loop_body_case_start_port = self._find_destination_connection(
                     loop_body_output_port
                 )
-                loop_body_case_start_box = self.port_box_map[
-                    loop_body_case_start_port
-                ]
+                loop_body_case_start_box = self.port_box_map[loop_body_case_start_port]
                 loop_body_case_control_flow = self._find_order_of_operations(
                     loop_body_case_start_box, False
                 )
-                result.append(
-                    WhileLoopNode(start, loop_body_case_control_flow, self)
-                )
+                result.append(WhileLoopNode(start, loop_body_case_control_flow, self))
 
                 if len(start.output_control_flow_ports) > 1:
                     # Completed case provided
@@ -456,9 +450,7 @@ class Generator:
                 loop_body_case_start_port = self._find_destination_connection(
                     loop_body_output_port
                 )
-                loop_body_case_start_box = self.port_box_map[
-                    loop_body_case_start_port
-                ]
+                loop_body_case_start_box = self.port_box_map[loop_body_case_start_port]
                 loop_body_case_control_flow = self._find_order_of_operations(
                     loop_body_case_start_box, False
                 )
