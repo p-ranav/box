@@ -4,30 +4,9 @@
 
 `Box` is a text-based visual programming language inspired by Unreal Engine blueprint function graphs.
 
-```console
-$ cat factorial.box
+![image](https://user-images.githubusercontent.com/8450091/124202542-2c6e9800-daa0-11eb-89ae-318e578dd1d1.png)
 
- ┌─ƒ(Factorial)───┐                     ┌─[Branch]─────┐                       ┌─[Set]─┐
- │               ►┼─────────────────────┼►       True ►┼───────────────────────┼►     ►┼─────────┐         ┌─[For Loop]───────────┐                   ┌───────┐
- │             n ○┼──┐               ┌──┼○      False ►┼──┐  ┌──────────┐  ┌───┼○      │         └─────────┼►          Loop body ►┼───────────────────┼►      │
- └────────────────┘  │    ┌────────┐ │  │              │  │  │  result ○┼──┘ ┌─┼○      │                   │                      │ ┌──────────┐ ┌────┼○  *=  │
-             ┌────┐  └────┼○  >=  ○┼─┘  └──────────────┘  │  └──────────┘    │ └───────┘         ┌────┐    │                      │ │  result ○┼─┘  ┌─┼○      │
-             │ 1 ○┼───────┼○       │                      │       ┌────┐     │                   │ 1 ○┼────┼○ start               │ └──────────┘    │ └───────┘
-             └────┘       └────────┘                      │       │ 1 ○┼─────┘                   └────┘    │                      │                 │
-                                                          │       └────┘                                   │               index ○┼─────────────────┘
-                                                          │                        ┌────┐                  │                      │
-                                                          │                        │ n ○┼─┐  ┌───────┐     │                      │
-                                                          │                        └────┘ └──┼○  +   │     │                      │
-                                                          │                        ┌────┐ ┌──┼○     ○┼─────┼○ end                 │
-                                                          │                        │ 1 ○┼─┘  └───────┘     │                      │
-                                                          │                        └────┘                  │                      │
-                                                          │                                      ┌────┐    │                      │
-                                                          │   ┌─[Return]─┐                       │ 1 ○┼────┼○ step                │
-                                                   ┌────┐ └───┼►         │                       └────┘    │           Completed ►┼────┐
-                                                   │ 1 ○┼─────┼○         │                                 └──────────────────────┘    │  ┌─[Return]─┐
-                                                   └────┘     └──────────┘                                               ┌─────────┐   └──┼►         │
-                                                                                                                         │ result ○┼──────┼○         │
-                                                                                                                         └─────────┘      └──────────┘
+```console
 $ box factorial.box -e 5
 120
 
@@ -63,26 +42,7 @@ A Box has 2 types of ports: control flow ports (`─►┼─`) and data flow po
 
 Below, you can see a `[For Loop]` box which is a special type of box that the interpreter can parse - It has 1 input control flow port, 3 input data flow ports (start, end, and step), 2 output control flow ports (the loop body and completed control flows), and 1 output data flow port (the index)
 
-```
-
-        ┌─[For Loop]───────────┐     
-    ────┼►          Loop body ►┼────
-        │                      │
-        │                      │
-    ────┼○ start               │
-        │                      │
-        │               index ○┼────
-        │                      │
-        │                      │
-        │                      │
-    ────┼○ end                 │
-        │                      │
-        │                      │
-        │                      │
-    ────┼○ step                │
-        │           Completed ►┼────
-        └──────────────────────┘    
-```
+![image](https://user-images.githubusercontent.com/8450091/124202730-a69f1c80-daa0-11eb-8cd8-55a8447dc224.png)
 
 ### Function Graphs
 
@@ -90,13 +50,7 @@ Below, you can see a `[For Loop]` box which is a special type of box that the in
 
 Here's a simple hello world example. This example declares a `Greet()` function that prints the string "Hello, World!" to the console. It calls the built-in print function.
 
-```
- ┌─ƒ(Greet)───┐                            ┌─ƒ(print)──┐
- │           ►┼────────────────────────────┼►          │
- └────────────┘    ┌──────────────────┐    │           │
-                   │ "Hello, World!" ○┼────┼○          │
-                   └──────────────────┘    └───────────┘
-```
+![image](https://user-images.githubusercontent.com/8450091/124202751-b28ade80-daa0-11eb-8be6-6d5157eed822.png)
 
 Execute the above program with the box interpreter like so:
 
