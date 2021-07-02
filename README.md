@@ -98,6 +98,7 @@ Hello,World!
 ### Gotchas
 
 * The interpreter will likely fail if you have tabs in your file - replace all tabs with the appropriate number of spaces
+* There are a number of UNICODE character you'll need for this to work - Just look through the samples and COPY-PASTE (no, seriously)
 
 ## Contributing
 Contributions are welcome, have a look at the [CONTRIBUTING.md](CONTRIBUTING.md) document for more information.
