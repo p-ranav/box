@@ -53,7 +53,7 @@ def Factorial(n):
 Install the box interpreter with `pip`
 
 ```console
-pip3 install box
+pip3 install boxlang
 ```
 
 Now open your text editor and start drawing your program! Check out existing samples [here](https://github.com/p-ranav/box/tree/main/samples). 
