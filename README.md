@@ -98,3 +98,9 @@ Hello,World!
 ### Gotchas
 
 * The interpreter will likely fail if you have tabs in your file - replace all tabs with the appropriate number of spaces
+
+## Contributing
+Contributions are welcome, have a look at the [CONTRIBUTING.md](CONTRIBUTING.md) document for more information.
+
+## License
+The project is available under the [MIT](https://opensource.org/licenses/MIT) license.
