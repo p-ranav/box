@@ -32,9 +32,6 @@ $ cat factorial.box
 $ box factorial.box -e 5
 120
 
-$ box factorial.box -e 5
-87178291200
-
 $ box factorial.box -o factorial.py
 
 $ cat factorial.py
